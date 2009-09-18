@@ -12,5 +12,5 @@
   :depends-on (:iolib.base :cffi :cffi-grovel)
   :components
   ((:file "pkgdcl")
-   #+unix(cffi-grovel:grovel-file "ffi-types")))
+   #+unix(cffi-grovel:grovel-file "ffi-termios-types-unix")))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
