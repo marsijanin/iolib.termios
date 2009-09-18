@@ -1,10 +1,8 @@
+;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
+;; termios (3) api wrapers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(in-package :common-lisp-user)
+(in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defpackage :iolib.termios
-  (:nicknames #:itty)
-  (:use :iolib.base :iolib.syscalls :cffi)
-  (:export
-   #:stty
-   #:with-raw-tty))
+(defsyscall (%cfgetispeed "cfgetispeed") :speed
+  (termios :pointer))			;const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
