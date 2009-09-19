@@ -45,6 +45,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios flags by fields >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; < Termios options manipulation routines >
 (defun set-termios-option (termios flag-or-control-character &optional value)
   "Setup termios flag or control character. If `flag-or-control-character'
    is one of the termios flags (i.e. icanon) and `value' is not specified
@@ -99,4 +100,28 @@
     (set-termios-option termios flag))
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-		 
+(defun make-evenp-termios (termios)
+  "Enable parenb and cs7; disable parodd"
+  (set-termios-option termios 'parenb t)
+  (set-termios-option termios 'parodd)
+  (set-termios-option termios 'cstopb)
+  (set-termios-option termios 'csize)
+  (set-termios-option termios 'cs7 t))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun make-oddp-termios (termios)
+  "Enable parenb, cs7, and parodd"
+  (set-termios-option termios 'parenb t)
+  (set-termios-option termios 'parodd t)
+  (set-termios-option termios 'cstopb)
+  (set-termios-option termios 'csize)
+  (set-termios-option termios 'cs7 t))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun make-8n1-termios (termios)
+  "Disable parenb, and set cs8."
+  (set-termios-option termios 'parenb)
+  (set-termios-option termios 'cstopb)
+  (set-termios-option termios 'csize)
+  (set-termios-option termios 'cs8 t))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; < Termios options manipulation routines >
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
