@@ -46,6 +46,7 @@
 ;; </ Termios flags by fields >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; < Termios options manipulation routines >
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun set-termios-option (termios flag-or-control-character &optional value)
   "Setup termios flag or control character. If `flag-or-control-character'
    is one of the termios flags (i.e. icanon) and `value' is not specified
@@ -100,6 +101,15 @@
     (set-termios-option termios flag))
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun make-cooked-termios (termios)
+  "Effect is opposite to `make-raw-termios'"
+  (dolist (flag '(ignbrk brkint parmrk istrip inlcr igncr icrnl ixon ;iflag
+		  opost						     ;oflag
+		  echo echonl icanon isig iexten		     ;lflag
+		  csize parenb))				     ;cflag
+    (set-termios-option termios flag t))
+  #|(set-termios-option termios 'cs8 t)|#)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-evenp-termios (termios)
   "Enable parenb and cs7; disable parodd"
   (set-termios-option termios 'parenb t)
@@ -123,5 +133,45 @@
   (set-termios-option termios 'csize)
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; < Termios options manipulation routines >
+;; </ Termios options manipulation routines >
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; I guess that bits manipulation stuff is not a lisp way,
+;; and using a kind of `stty (1p)' will be more lisp kind
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun stty (fd &rest options)
+  "Impliment stty (1p) in lisp way.
+   Each `options' elemen should be termios option name
+   or list in (option-name option-value) form."
+  (labels ((process-option (option termios)
+	     (let ((option-name (if (consp option)
+				    (first option)
+				    option))
+		   (option-value (if (consp option)
+				     (second option))))
+	       (cond
+		 ((member option-name *baud-rates*)
+		  (%cfsetispeed termios (symbol-value option-name))
+		  (%cfsetospeed termios (symbol-value option-name)))
+		 ((member option-name '(evenp parity))
+		  (if option-value
+		      (make-8n1-termios termios)
+		      (make-evenp-termios termios)))
+		 ((eql option-name 'oddp)
+		  (if option-value
+		      (make-8n1-termios termios)
+		      (make-oddp-termios termios)))
+		 ((eql option-name 'raw)
+		  (if option-value
+		      (make-raw-termios termios)
+		      (make-cooked-termios termios)))
+		 ((eql option-name 'cooked)
+		  (if option-value
+		      (make-cooked-termios termios)
+		      (make-raw-termios termios)))
+		 (t (set-termios-option termios option-name option-value))))))
+    (with-foreign-object (ptr 'termios)
+      (%tcgetattr fd ptr)
+      (dolist (option options)
+	(process-option option ptr))
+      (%tcsetattr fd tcsanow ptr))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
