@@ -3,19 +3,19 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defsyscall (%cfgetispeed "cfgetispeed") speed
+(defsyscall (%cfgetispeed "cfgetispeed") termios-speed
   (termios :pointer))			; const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defsyscall (%cfgetospeed "cfgetospeed") speed
+(defsyscall (%cfgetospeed "cfgetospeed") termios-speed
   (termios :pointer))			; const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%cfsetispeed "cfsetispeed") :int
   (termios :pointer)			; struct termios *
-  (speed   speed))
+  (speed   termios-speed))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%cfsetospeed "cfsetospeed") :int
   (termios :pointer) 			; struct termios *	
-  (speed   speed))
+  (speed   termios-speed))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%tcdrain "tcdrain") :int
   (fd :int))
