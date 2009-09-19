@@ -1,4 +1,3 @@
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
 ;; common lisp wrapers for termios (3) api
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -66,7 +65,7 @@
 		   (logandc2 flag (foreign-slot-value termios 'termios field))))
 	   (set-control-character (character value)
 	     (setf (mem-aref (foreign-slot-pointer termios 'termios 'control-chars)
-			     :cc character)
+			     'cc character)
 		   value)))
     (let ((fvalue (symbol-value flag-or-control-character)))
       (cond ((member flag-or-control-character *cflags*)
@@ -176,7 +175,8 @@
 		(make-cooked-termios termios))
 	       (t (if (atom option)
 		      (set-termios-option termios option)
-		      (set-termios-option (first option) (second option)))))))
+		      (set-termios-option termios (first option)
+					  (second option)))))))
     (with-foreign-object (ptr 'termios)
       (%tcgetattr fd ptr)
       (dolist (option options)
