@@ -138,6 +138,12 @@
    #:dual-channel-tty-gray-stream
    ;; useful wrapers:
    #:stty
+   ;; additional stty options:
+   #:raw
+   #:cooked
+   #:oddp
+   #:parity
+   ;#:really-raw
    #:open-tty-stream
    #:with-tty-stream))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
