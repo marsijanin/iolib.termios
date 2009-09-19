@@ -156,8 +156,8 @@
   (labels ((process-option (option termios)
 	     (cond 
 	       ((member option *baud-rates*)
-		(%cfsetispeed termios option)
-		(%cfsetospeed termios option))
+		(%cfsetispeed termios (symbol-value option))
+		(%cfsetospeed termios (symbol-value option)))
 	       ((member option '(evenp 'parity))
 		(make-evenp-termios termios))
 	       ((eq option 'oddp)

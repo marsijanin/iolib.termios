@@ -1,3 +1,5 @@
+;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
+;; termios (3p) api wrapers -  package definition.
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :common-lisp-user)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -120,7 +122,19 @@
    #:veol2
    #:vmin
    #:vtime
-   ;; 
+   ;; termios.h (0p) functions:
+   #:%cfgetispeed
+   #:%cfgetospeed
+   #:%cfsetispeed
+   #:%cfsetospeed
+   #:%tcdrain
+   #:%tcflow
+   #:%tcflush
+   #:%tcgetattr
+   #:%tcgetsid
+   #:%tcsendbreak
+   #:%tcsetattr
+   ;; useful wrapers:
    #:stty
-   #:with-raw-tty))
+   #:with-raw-tty))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
