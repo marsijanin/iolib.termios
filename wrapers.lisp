@@ -9,9 +9,8 @@
 ;; don't using defconstant case sbcl singnal constant redefining error
 ;; with and w/o eval-when case results are not eql
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *cflags* '(cbaud exta extb csize cs5 cs6 cs7 cs8
-			 cstopb cread parenb parodd hupcl clocal
-			 loblk crtscts)   
+(defparameter *cflags* '(csize cs5 cs6 cs7 cs8
+			 cstopb cread parenb parodd hupcl clocal)   
   "Termios cflag filed constant")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defparameter *baud-rates* '(b0 b50 b75 b110 b134 b150 b200 b300
@@ -22,18 +21,16 @@
 (defparameter *tcssetattr-actions* '(tcsanow tcsadrain tcsaflush)
   "Valid constants for tcsetattr action parameter")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *lflags* '(isig icanon xcase echo echoe echok echonl
-			 noflsh iexten echoctl echoprt echoke flusho
-			 pendin tostop)
+(defparameter *lflags* '(isig icanon echo echoe echok echonl
+			 noflsh iexten tostop)
   "Termios lflag filed constants")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defparameter *iflags* '(inpck ignpar parmrk istrip ixon ixoff
-			 ixany ignbrk brkint inlcr igncr icrnl
-			 iuclc imaxbel)
+			 ixany ignbrk brkint inlcr igncr icrnl)
   "Termios iflag filed constants")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *oflags* '(opost olcuc onlcr ocrnl nocr onlret ofill
-			 ofdel nldly nl0 nl1 crdly cr0 cr1 cr2 cr3
+(defparameter *oflags* '(opost onlcr ocrnl onlret ofill
+			 nldly nl0 nl1 crdly cr0 cr1 cr2 cr3
 			 tabdly tab0 tab1 tab2 tab3 bsdly bs0 bs1
 			 vtdly vt0 vt1 ffdly ff0 ff1)
   "Termios oflag filed constants")
@@ -133,14 +130,17 @@
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-really-raw-termios (termios)
-  (dolist (flag '(cread clocal))
-    (set-termios-option termios flag t))
-  (dolist (flag '(nl0 cr0 tab0  bs0 vt0 ff0 isig icanon iexten echo echoe echok
-                  ignbrk brkint inlcr igncr icrnl ixoff ixany opost ocrnl onlcr
-                  onlret ofill echonl noflsh tostop))
-      (set-termios-option termios flag))
-  (dolist (cc *control-characters*)
-    (set-termios-option termios cc 0)))
+  "Leave cread and clocal flags setted, reset others"
+  (dolist (neet-be-set '(cread clocal))
+    (set-termios-option termios neet-be-set t))
+  (dolist (dont-need-for-with-stuff
+            (append (remove-if #'(lambda (x)
+                                   (member x '(cread clocal)))
+                               *cflags*)
+                    *iflags* *oflags* *lflags*))
+    (set-termios-option termios dont-need-for-with-stuff))
+  (dolist (control-character *control-characters*)
+    (set-termios-option termios control-character 0)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios options manipulation routines >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -161,6 +161,8 @@
    Setup speed: (stty fd 'b115200)
    Setup raw mode: (stty fd 'raw) or (stty fd '(raw t))
    Setup cooked mode: (stty fd '(raw nil) or (stty 'cooked)
+   Reset all except cread and clocal, set 115200-8n1 mode:
+   (stty fd 'really-raw '(parity nil) 'b115200)
   "
   (labels ((process-option (option termios)
 	     (cond 

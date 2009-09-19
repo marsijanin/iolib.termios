@@ -26,6 +26,16 @@
    execute `body', to restore original serial device settings
    after execution of the `body' (in protected part of the
    `unwind-protect' macro) and to close stream.
+
+  Checking serial device by Rx<->Tx connection:
+  (with-tty-stream (tty \"/dev/ttyUSB0\" (logior o-rdwr o-nonblock) 
+                        'really-raw '(parity nil) 'b115200)  
+    (let* ((out \"hello\")                          
+           (ln (length out))                      
+           (in  (make-string ln)))                
+      (stream-write-sequence tty out 0 ln)        
+      (stream-read-sequence tty in 0 ln)          
+      in))
   "
   (with-gensyms (old set)
   `(let ((,stream-var (open-tty-stream ,path :flag ,flag))
