@@ -9,10 +9,11 @@
   :description "Termios (3p) api wrappers"
   :maintainer "Razbegaiv N.V. <marsijanin@gmail.com>"
   :licence "MIT"
-  :depends-on (:iolib.base :iolib.syscalls :cffi :cffi-grovel)
+  :depends-on (:iolib.base :iolib.syscalls :iolib.streams :cffi :cffi-grovel)
   :components
   ((:file "pkgdcl")
    #+unix(cffi-grovel:grovel-file "ffi-termios-types-unix")
    #+unix(:file "ffi-termios-functions-unix")
-   #+unix(:file "wrapers")))
+   #+unix(:file "wrapers")
+   (:file "streams")))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

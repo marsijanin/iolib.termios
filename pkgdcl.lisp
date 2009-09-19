@@ -5,7 +5,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defpackage :iolib.termios
   (:nicknames #:itty)
-  (:use :iolib.base :iolib.syscalls :cffi)
+  (:use :iolib.base :iolib.syscalls :iolib.streams :cffi)
   (:export
    ;; Struct termios:
    #:termios
@@ -134,7 +134,10 @@
    #:%tcgetsid
    #:%tcsendbreak
    #:%tcsetattr
+   ;; classes:
+   #:dual-channel-tty-gray-stream
    ;; useful wrapers:
    #:stty
-   #:with-raw-tty))			; </ defpackage >
+   #:open-tty-stream
+   #:with-tty-stream))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
