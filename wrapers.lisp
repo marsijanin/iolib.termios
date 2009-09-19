@@ -39,7 +39,7 @@
   "Termios oflag filed constants")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defparameter *control-characters* '(vintr vquit verase vkill veof
-				     veol veol2 vmin vtime)
+				     veol vmin vtime)
   "Termios control character constants for termios cc field")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios flags by fields >
@@ -132,6 +132,16 @@
   (set-termios-option termios 'csize)
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun make-really-raw-termios (termios)
+  (dolist (flag '(cread clocal))
+    (set-termios-option termios flag t))
+  (dolist (flag '(nl0 cr0 tab0  bs0 vt0 ff0 isig icanon iexten echo echoe echok
+                  ignbrk brkint inlcr igncr icrnl ixoff ixany opost ocrnl onlcr
+                  onlret ofill echonl noflsh tostop))
+      (set-termios-option termios flag))
+  (dolist (cc *control-characters*)
+    (set-termios-option termios cc 0)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios options manipulation routines >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; I guess that bits manipulation stuff is not a lisp way,
@@ -173,6 +183,8 @@
 			 (eql (first option) 'raw)
 			 (null (second option))))
 		(make-cooked-termios termios))
+               ((eql option 'really-raw)
+                (make-really-raw-termios termios))
 	       (t (if (atom option)
 		      (set-termios-option termios option)
 		      (set-termios-option termios (first option)

@@ -143,7 +143,7 @@
    #:cooked
    #:oddp
    #:parity
-   ;#:really-raw
+   #:really-raw
    #:open-tty-stream
    #:with-tty-stream))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
