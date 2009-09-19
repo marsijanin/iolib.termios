@@ -141,34 +141,42 @@
 (defun stty (fd &rest options)
   "Impliment stty (1p) in lisp way.
    Each `options' elemen should be termios option name
-   or list in (option-name option-value) form."
+   or list in (option-name option-value) form.
+   'flag-name or '(flag-name t) set corresponding flag,
+   '(flag-name nil) reset it.
+   'baud-rate-constant set corresponding speed.
+   '(control-character-name control-character-value) setup corresponding
+    control character value.
+   
+   Setup for 8n1 mode: (stty fd '(evenp nil))
+   Setup speed: (stty fd 'b115200)
+   Setup raw mode: (stty fd 'raw) or (stty fd '(raw t))
+   Setup cooked mode: (stty fd '(raw nil) or (stty 'cooked)
+  "
   (labels ((process-option (option termios)
-	     (let ((option-name (if (consp option)
-				    (first option)
-				    option))
-		   (option-value (if (consp option)
-				     (second option))))
-	       (cond
-		 ((member option-name *baud-rates*)
-		  (%cfsetispeed termios (symbol-value option-name))
-		  (%cfsetospeed termios (symbol-value option-name)))
-		 ((member option-name '(evenp parity))
-		  (if option-value
-		      (make-8n1-termios termios)
-		      (make-evenp-termios termios)))
-		 ((eql option-name 'oddp)
-		  (if option-value
-		      (make-8n1-termios termios)
-		      (make-oddp-termios termios)))
-		 ((eql option-name 'raw)
-		  (if option-value
-		      (make-raw-termios termios)
-		      (make-cooked-termios termios)))
-		 ((eql option-name 'cooked)
-		  (if option-value
-		      (make-cooked-termios termios)
-		      (make-raw-termios termios)))
-		 (t (set-termios-option termios option-name option-value))))))
+	     (cond 
+	       ((member option *baud-rates*)
+		(%cfsetispeed termios option)
+		(%cfsetospeed termios option))
+	       ((member option '(evenp 'parity))
+		(make-evenp-termios termios))
+	       ((eq option 'oddp)
+		(make-oddp-termios termios))
+	       ((and (consp option)
+		     (null (second option))
+		     (member (first option)
+			     '(parity  evenp oddp)))
+		(make-8n1-termios termios))
+	       ((eql option 'raw)
+		(make-raw-termios termios))
+	       ((or (eql option 'cooked)
+		    (and (consp option)
+			 (eql (first option) 'raw)
+			 (null (second option))))
+		(make-cooked-termios termios))
+	       (t (if (atom option)
+		      (set-termios-option termios option)
+		      (set-termios-option (first option) (second option)))))))
     (with-foreign-object (ptr 'termios)
       (%tcgetattr fd ptr)
       (dolist (option options)
