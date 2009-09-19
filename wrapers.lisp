@@ -47,8 +47,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun set-termios-option (termios flag-or-control-character &optional value)
   "Setup termios flag or control character. If `flag-or-control-character'
-   is one of the termios flags (i.e. icanon) and no value is specified
-   flag in corresponding termios field is reseted, otherwise seted.
+   is one of the termios flags (i.e. icanon) and `value' is not specified
+   then flag in corresponding termios field is reseted, otherwise seted.
    If  `flag-or-control-character' is control character corresponding
    value in termios cc field is seted to the `value' parameter.
 
@@ -90,5 +90,13 @@
 	    (t (error "Unknown termios flag or control character ~a"
 		      flag-or-control-character))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
+(defun make-raw-termios (termios)
+  "Same effect as cfmakeraw()"
+  (dolist (flag '(ignbrk brkint parmrk istrip inlcr igncr icrnl ixon ;iflag
+		  opost						     ;oflag
+		  echo echonl icanon isig iexten		     ;lflag
+		  csize parenb))				     ;cflag
+    (set-termios-option termios flag))
+  (set-termios-option termios 'cs8 t))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		 
