@@ -20,12 +20,13 @@
 		   :external-format external-format)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmacro with-tty-stream ((stream-var path flag &rest options) &body body)
-  "Trying to open serial device by `path', setup it by specified `options'
-   (same syntax as for `stty'), bind associated with serial device
-    `dual-channel-tty-gray-stream' instances to the `stream-var' variable,
-    execute `body', to restore original serial device settings
-    after execution of the `body'(in protected part of the
-    `unwind-protect' macro) and close stream."
+  "Trying to open serial device by `path', to setup it by specified `options'
+   (same syntax as for `stty'), to bind `dual-channel-tty-gray-stream' instances
+   associated with serial device to the `stream-var' variable,
+   execute `body', to restore original serial device settings
+   after execution of the `body' (in protected part of the
+   `unwind-protect' macro) and to close stream.
+  "
   (with-gensyms (old set)
   `(let ((,stream-var (open-tty-stream ,path :flag ,flag))
 	 (,set))
