@@ -13,5 +13,6 @@
   :components
   ((:file "pkgdcl")
    #+unix(cffi-grovel:grovel-file "ffi-termios-types-unix")
-   (:file "ffi-termios-functions-unix")))
+   #+unix(:file "ffi-termios-functions-unix")
+   #+unix(:file "wrapers")))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
