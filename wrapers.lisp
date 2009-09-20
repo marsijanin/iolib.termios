@@ -151,8 +151,8 @@
   "Impliment stty (1p) in lisp way.
    Each `options' elemen should be termios option name
    or list in (option-name option-value) form.
-   'flag-name or '(flag-name t) set corresponding flag,
-   '(flag-name nil) reset it.
+   '(flag-name t) set corresponding flag,
+   '(flag-name nil) or 'flag-name reset it.
    'baud-rate-constant set corresponding speed.
    '(control-character-name control-character-value) setup corresponding
     control character value.
