@@ -13,6 +13,7 @@
   :components
   ((:file "pkgdcl")
    #+unix(cffi-grovel:grovel-file "ffi-termios-types-unix")
+   #+unix(cffi-grovel:grovel-file "ffi-termios-constants")
    #+unix(:file "ffi-termios-functions-unix")
    #+unix(:file "wrapers")
    (:file "streams")))
