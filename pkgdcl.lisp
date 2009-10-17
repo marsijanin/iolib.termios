@@ -145,5 +145,6 @@
    #:parity
    #:really-raw
    #:open-tty-stream
-   #:with-tty-stream))			; </ defpackage >
+   #:with-tty-stream
+   #:with-raw-serial))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

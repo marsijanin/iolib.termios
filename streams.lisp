@@ -35,8 +35,8 @@
     (let* ((out \"hello\")                                   
            (ln (length out))                               
            (in  (make-string ln)))                         
-      (stream-write-sequence tty out 0 ln)                 
-      (sleep .1)                                           
+      (stream-write-sequence tty out 0 ln)
+      (iomux:wait-until-fd-ready (fd-of tty) :input 1 t)
       (stream-read-sequence tty in 0 ln)                   
       in))                                                 
   "
