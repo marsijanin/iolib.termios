@@ -53,3 +53,53 @@
 		    (%tcsetattr (input-fd-of ,stream-var) tcsanow ,old))
 		(close ,stream-var)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro with-raw-serial ((stream path
+                                   &key (speed 115200)
+                                   (parity :n)
+                                   (byte-size 8))
+                           &body body)
+  "Wraper around `with-tty-stream' with a very few number of &key options:
+   - speed: baud rate. An integer, this macro will look for a corresponding
+     baud rate constant and use it, or signal an error otherwise;
+   - parity: one of `:n' (no parity checking), `:e' (even), `:o' (odd),
+     or `:s' (space parity);
+   - byte-size: character size as it described in
+     `posix serial programming manual', can be an integer in 5-8 (inclusive)
+     diapason.
+
+     I.e. 9600-8n1 mode will be `:speed 9600 :parity :n :byte-size 8',
+     and 300-5e1 `:speed 300 :parity :e :byte-size 5'.
+
+     115200-8n1 is default.
+  "
+  `(with-tty-stream
+       (,stream ,path (logior o-rdwr o-nonblock)
+                ;; speed first
+                ,@(let* ((sym (find-symbol (format nil "B~a" speed)
+                                          :iolib.termios))
+                        (hash (gethash sym *termios-options*)))
+                        (if (and hash (eql (cdr hash) 'baud-rates))
+                            `(',sym)
+                            (error "Unknown baud rate ~a" speed)))
+                ;; do not block on reading
+                'raw '(vtime 0) '(vmin 0)
+                ;; allways reset csize before set byte size
+                'csize
+                ;; parity
+                ,@(case parity
+                        (:n `('parenb 'cstopb))
+                        (:e `('(parenb t) 'parodd 'cstopb))
+                        (:o `('(parenb t) '(parodd t) 'cstopb))
+                        (:s `('parenb 'parodd 'cstopb))
+                        (t
+                         (error
+                          "Unsupported parity checking mode ~a" parity)))
+                ;; byte size
+                ,@(case byte-size
+                       (5 `('(cs5 t)))
+                       (6 `('(cs6 t)))
+                       (7 `('(cs7 t)))
+                       (8 `('(cs8 t)))
+                       (t (error "Byte size ~a is unsupported" byte-size))))
+     ,@body))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
