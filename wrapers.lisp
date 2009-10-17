@@ -45,16 +45,17 @@
     "Termios control character constants for termios cc field")
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defparameter *termios-options* (make-hash-table :test #'eql)
-    "Hash table of all valid termios options.")
+    "Hash table of all valid termios options.
+     Each entry is dot pair in (<option value> . <option designation>) form,
+     i.e. (2 . lflag) etc.")
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   (defmacro define-termios-option (option filed)
-    "Fill `*termios-options*' hash-table with valid termios optins values."
+    "Fill `*termios-options*' hash-table with valid termios options values."
     `(when (boundp ,option)
        (setf (gethash ,option *termios-options*)
              (cons (symbol-value ,option) ',filed))))
   ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   ;; Filling *termios-options*
-
   (mapcar #'(lambda (x) (define-termios-option x iflag)) *iflags*)
   (mapcar #'(lambda (x) (define-termios-option x oflag)) *oflags*)
   (mapcar #'(lambda (x) (define-termios-option x lflag)) *lflags*)
@@ -79,39 +80,29 @@
    Set   icanon flag: (set-termios-option term 'icanon t)
    Set vtime value to 0: (set-termios-option 'vtime 0)
   "
-  (labels ((set-flag (flag field)
-	     (setf (foreign-slot-value termios 'termios field)
-		   (logior flag (foreign-slot-value termios 'termios field))))
-	   (reset-flag (flag field)
-	     (setf (foreign-slot-value termios 'termios field)
-		   (logandc2 flag (foreign-slot-value termios 'termios field))))
-	   (set-control-character (character value)
-	     (setf (mem-aref (foreign-slot-pointer termios 'termios 'control-chars)
-			     'cc character)
-		   value)))
-    (let ((fvalue (symbol-value flag-or-control-character)))
-      (cond ((member flag-or-control-character *cflags*)
-	     (if value
-		 (set-flag fvalue 'cflag)
-		 (reset-flag fvalue 'cflag)))
-	    ((member flag-or-control-character *lflags*)
-	     (if value
-		 (set-flag fvalue 'lflag)
-		 (reset-flag fvalue 'lflag)))
-	    ((member flag-or-control-character *iflags*)
-	     (if value
-		 (set-flag fvalue 'iflag)
-		 (reset-flag fvalue 'iflag)))
-	    ((member flag-or-control-character *oflags*)
-	     (if value
-		 (set-flag fvalue 'oflag)
-		 (reset-flag fvalue 'oflag)))
-	    ((member flag-or-control-character *control-characters*)
-	     (if value
-		 (set-control-character fvalue value)
-		 (error "You should specify control character value")))
-	    (t (error "Unknown termios flag or control character ~a"
-		      flag-or-control-character))))))
+  (let ((flag-value (gethash flag-or-control-character *termios-options*)))
+    (cond
+      ;; on of the {c,l,i,o}flag fields options:
+      ((member (cdr flag-value) '(iflag oflag cflag lflag) :test #'eql)
+       (setf (foreign-slot-value termios 'termios (cdr flag-value))
+             ;; value specified => set (logior), reset over otherwise
+             (funcall (if value #'logior #'logandc2)
+                      (foreign-slot-value termios 'termios (cdr flag-value))
+                      (car flag-value))))
+      ;; control characters
+      ((eql (cdr flag-value) 'control-chars)
+       (setf (mem-aref (foreign-slot-pointer termios
+                                             'termios
+                                             'control-chars)
+                       'cc
+                       (car flag-value)) ;constant name is offset
+             value))
+      ;; baud-rates
+      ((eql (cdr flag-value) 'baud-rates)
+       (%cfsetispeed termios (car flag-value))
+       (%cfsetospeed termios (car flag-value)))
+      (t (error "Unknown termios option ~a" flag-or-control-character)))
+    termios))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-raw-termios (termios)
   "Same effect as cfmakeraw()"
@@ -174,7 +165,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun stty (fd &rest options)
   "Impliment stty (1p) in lisp way.
-   Each `options' elemen should be termios option name
+   Each `options' element should be termios option name
    or list in (option-name option-value) form.
    '(flag-name t) set corresponding flag,
    '(flag-name nil) or 'flag-name reset it.
@@ -189,6 +180,13 @@
    Reset all except cread and clocal, set 115200-8n1 mode:
    (stty fd 'really-raw '(parity nil) 'b115200)
   "
+  #|(with-foreign-object (ptr 'termios)
+    (%tcgetattr fd ptr)
+    (dolist (option options)
+      (if (consp option)
+          (set-termios-option ptr (car option) (cdr option))
+          (set-termios-option ptr option)))
+    (%tcsetattr fd tcsanow ptr))|#
   (labels ((process-option (option termios)
 	     (cond 
 	       ((member option *baud-rates*)
