@@ -1,7 +1,7 @@
 ;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
 ;; Grovel for termios constants.
 ;; TODO: check non POSXI features for other (non linux) systems: i.e #+bsd etc.
-;; Currently non POSIX features are #+linux marked or #(or linux bsd) marked
+;; Currently non POSIX features are #+linux marked or #+(or linux bsd) marked
 ;; if they requires _BSD_SOURCE
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :iolib.termios)

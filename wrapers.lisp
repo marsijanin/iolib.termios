@@ -9,35 +9,60 @@
 ;; don't using defconstant case sbcl singnal constant redefining error
 ;; with and w/o eval-when case results are not eql
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *cflags* '(csize cs5 cs6 cs7 cs8
-			 cstopb cread parenb parodd hupcl clocal)   
-  "Termios cflag filed constant")
+(eval-when (:compile-toplevel :load-toplevel)
+  (defparameter *cflags* '(cbaud cbaudex csize cs5 cs6 cs7 cs8 cstopb cread
+                           parenb parodd hupcl clocal loblk cibaud cmspar
+                           crtscts)
+    "Termios cflag filed constant")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *baud-rates* '(b0 b50 b75 b110 b134 b150 b200 b300
-			     b600 b1200 b1800 b2400 b4800 b9600
-			     b19200 b38400 b57600 b76800 b115200)
-  "Baud rates constants")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *tcssetattr-actions* '(tcsanow tcsadrain tcsaflush)
-  "Valid constants for tcsetattr action parameter")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *lflags* '(isig icanon echo echoe echok echonl
-			 noflsh iexten tostop)
-  "Termios lflag filed constants")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *iflags* '(inpck ignpar parmrk istrip ixon ixoff
-			 ixany ignbrk brkint inlcr igncr icrnl)
-  "Termios iflag filed constants")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *oflags* '(opost onlcr ocrnl onlret ofill
-			 nldly nl0 nl1 crdly cr0 cr1 cr2 cr3
-			 tabdly tab0 tab1 tab2 tab3 bsdly bs0 bs1
-			 vtdly vt0 vt1 ffdly ff0 ff1)
-  "Termios oflag filed constants")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defparameter *control-characters* '(vintr vquit verase vkill veof
-				     veol vmin vtime)
-  "Termios control character constants for termios cc field")
+  (defparameter *baud-rates* '(b0 b50 b75 b110 b134 b150 b200 b300 b600 b1200
+                               b1800 b2400 b4800 b9600 b19200 b38400 b57600
+                               b115200 b230400 b460800 b500000 b576000 b921600
+                               b1000000 b1152000 b1500000 b2000000 b2500000
+                               b3000000 b3500000 b4000000)
+    "Baud rates constants")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *tcssetattr-actions* '(tcsanow tcsadrain tcsaflush)
+    "Valid constants for tcsetattr action parameter")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *lflags* '(isig icanon xcase echo echoe echok echonl echoctl
+                           echoprt echoke defecho flusho noflsh tostop pendin
+                           iexten)
+    "Termios lflag filed constants")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *iflags* '(ignbrk brkint ignpar parmrk inpck istrip inlcr igncr
+                           icrnl iuclc ixon ixany ixoff imaxbel iutf8)
+    "Termios iflag filed constants")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *oflags* '(opost olcuc onlcr ocrnl onocr onlret ofill ofdel
+                           nldly crdly tabdly bsdly vtdly ffdly)
+    "Termios oflag filed constants")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *control-characters* '(vintr vquit verase vkill veof vmin veol
+                                       vtime veol2 vswtch vstart vstop vsusp
+                                       vdsusp vlnext vwerase vreprint vdiscard
+                                       vstatus)
+    "Termios control character constants for termios cc field")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defparameter *termios-options* (make-hash-table :test #'eql)
+    "Hash table of all valid termios options.")
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (defmacro define-termios-option (option filed)
+    "Fill `*termios-options*' hash-table with valid termios optins values."
+    `(when (boundp ,option)
+       (setf (gethash ,option *termios-options*)
+             (cons (symbol-value ,option) ',filed))))
+  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  ;; Filling *termios-options*
+
+  (mapcar #'(lambda (x) (define-termios-option x iflag)) *iflags*)
+  (mapcar #'(lambda (x) (define-termios-option x oflag)) *oflags*)
+  (mapcar #'(lambda (x) (define-termios-option x lflag)) *lflags*)
+  (mapcar #'(lambda (x) (define-termios-option x cflag)) *cflags*)
+  (mapcar #'(lambda (x) (define-termios-option x control-chars))
+          *control-characters*)
+  (mapcar #'(lambda (x) (define-termios-option x baud-rates))
+          *baud-rates*))                ;</ (eval-when
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios flags by fields >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
