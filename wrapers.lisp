@@ -145,19 +145,6 @@
   (set-termios-option termios 'csize)
   (set-termios-option termios 'cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun make-really-raw-termios (termios)
-  "Leave cread and clocal flags setted, reset others"
-  (dolist (neet-be-set '(cread clocal))
-    (set-termios-option termios neet-be-set t))
-  (dolist (dont-need-for-with-stuff
-            (append (remove-if #'(lambda (x)
-                                   (member x '(cread clocal)))
-                               *cflags*)
-                    *iflags* *oflags* *lflags*))
-    (set-termios-option termios dont-need-for-with-stuff))
-  (dolist (control-character *control-characters*)
-    (set-termios-option termios control-character 0)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; </ Termios options manipulation routines >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; I guess that bits manipulation stuff is not a lisp way,
@@ -175,18 +162,9 @@
    
    Setup for 8n1 mode: (stty fd '(evenp nil))
    Setup speed: (stty fd 'b115200)
-   Setup raw mode: (stty fd 'raw) or (stty fd '(raw t))
+   Setup raw mode: (stty fd 'raw) 
    Setup cooked mode: (stty fd '(raw nil) or (stty 'cooked)
-   Reset all except cread and clocal, set 115200-8n1 mode:
-   (stty fd 'really-raw '(parity nil) 'b115200)
   "
-  #|(with-foreign-object (ptr 'termios)
-    (%tcgetattr fd ptr)
-    (dolist (option options)
-      (if (consp option)
-          (set-termios-option ptr (car option) (cdr option))
-          (set-termios-option ptr option)))
-    (%tcsetattr fd tcsanow ptr))|#
   (labels ((process-option (option termios)
 	     (cond 
 	       ((member option *baud-rates*)
@@ -208,8 +186,6 @@
 			 (eql (first option) 'raw)
 			 (null (second option))))
 		(make-cooked-termios termios))
-               ((eql option 'really-raw)
-                (make-really-raw-termios termios))
 	       (t (if (atom option)
 		      (set-termios-option termios option)
 		      (set-termios-option termios (first option)
