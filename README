@@ -1,9 +1,16 @@
 iolib.termios - an iolib (http://common-lisp.net/project/iolib)
-extension for RS-422/485/232 (aka serial) devices - i.e. termios (3)
+extension for RS-422/485/232 (aka serial) interfaces - i.e. termios (3)
 api common lisp wrappers.  It is still proof of concept now, and
 currently there is no documentation, except docstrings.
 
 Some notes:
+
+I start wrote this stuff in order to make my code for communication
+with some embedded devices wih via RS-422/485 interface not too
+implementation depended (I using some sbcl wrappers from sb-posix:
+http://paste.lisp.org/display/87952).  In other words main purpose of
+the iolib.termios is more like to provide a portable way to talk with
+modem from lisp, than to cover all termios features.
 
 Each instance of the `dual-channel-tty-gray-stream' store original
 termios settings (baud rates, control characters values etc.) and
@@ -33,3 +40,17 @@ type 'icanon instead of -icanon to disable feature, '(icanon t)
 instead of `'icanon' to enable feature, '(vtime 1) instead of `vtime
 1' to specify some value. And note that switching to raw mode is just
 'raw, not '(raw t).
+
+TODO:
+
+0 Checking right `#+' and `#-' for non posix features.
+
+1 Testing on other OS and lisp implementation (still sitting down on
+sbcl on 32 bit archlinux). 
+
+3 Testing units.
+
+4 Restarts on i/o methods.
+
+5 Streams class and methods for 9-bit mode (using parity checking bits
+for data too). 
