@@ -1,0 +1,35 @@
+iolib.termios - an iolib (http://common-lisp.net/project/iolib)
+extension for RS-422/485/232 (aka serial) devices - i.e. termios (3)
+api common lisp wrappers.  It is still proof of concept now, and
+currently there is no documentation, except docstrings.
+
+Some notes:
+
+Each instance of the `dual-channel-tty-gray-stream' store original
+termios settings (baud rates, control characters values etc.) and
+call `close' on such stream will restore this settings. 
+
+If you specify `read-timeout' & `write-timeout' options of the
+`dual-channel-tty-gray-stream' (via `setf'), then
+`stream-read/write-sequence' methods (from iolib.base package) will
+poll stream `fd' for corresponding i/o operation with specified timeout
+values before reading/writing.
+
+
+Using `with-raw-serial' serial macro is recommended. Syntax is like with-open-file:
+ (with-raw-serial (stream path &key (speed 115200) (parity n) (byte-size 8))
+    &body body)
+
+I.e. you should only specify require baud rate (note, that this macro
+will look for a corresponding baud rate constant and signal en error,
+aif you will try to use nonstandard baud rate), byte/character size and
+parity checking mode. 
+
+You could also use `with-tty-stream' macro that can give you more
+control.
+
+stty function is like stty shell utility, except that you should
+type 'icanon instead of -icanon to disable feature, '(icanon t)
+instead of `'icanon' to enable feature, '(vtime 1) instead of `vtime
+1' to specify some value. And note that switching to raw mode is just
+'raw, not '(raw t).
