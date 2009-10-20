@@ -4,7 +4,10 @@
 (in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defclass dual-channel-tty-gray-stream (dual-channel-single-fd-gray-stream)
-  ((path :reader tty-path :initarg :path :type string))
+  ((path :reader tty-path :initarg :path :type string)
+   (read-timeout :accessor read-timeout :initarg :read-timeout)
+   (write-timeout :accessor write-timeout :initarg :write-timeout)
+   (original-settings :reader original-settings :initarg :original-settings))
   (:documentation "Gray stream class for serial devices"))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun open-tty-stream (path
@@ -12,46 +15,64 @@
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
    with serial device"
-  (let ((fd (%sys-open path flag mode)))
+  (let ((fd (%sys-open path flag mode))
+        (termios (foreign-alloc 'termios)))
+    (%tcgetattr fd termios)
     (make-instance 'dual-channel-tty-gray-stream
 		   :input-fd fd
 		   :output-fd fd
 		   :path path
-		   :external-format external-format)))
+		   :external-format external-format
+                   :original-settings termios)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmethod close :before ((stream dual-channel-tty-gray-stream) &key abort)
+  (declare (ignorable abort))
+  (%tcsetattr (fd-of stream) tcsanow (original-settings stream))
+  (foreign-free (original-settings stream))
+  (setf (slot-value stream 'original-settings) nil))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmethod stream-read-sequence :before ((stream dual-channel-tty-gray-stream)
+                                         sequence start end &key)
+  (when (slot-boundp stream 'read-timeout)
+    (iomux:wait-until-fd-ready (fd-of stream) :input (read-timeout stream) t)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmethod stream-write-sequence :before ((stream dual-channel-tty-gray-stream)
+                                         sequence start end &key)
+  (when (slot-boundp stream 'write-timeout)
+    (iomux:wait-until-fd-ready (fd-of stream) :output
+                               (write-timeout stream) t)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmethod stream-write-sequence :after ((stream dual-channel-tty-gray-stream)
+                                         sequence start end
+                                         &key (finish-output t))
+  (when finish-output
+    (stream-finish-output stream)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmacro with-tty-stream ((stream-var path flag &rest options) &body body)
   "Trying to open serial device by `path', to setup it by specified `options'
-   (same syntax as for `stty'), to bind `dual-channel-tty-gray-stream' instances
-   associated with serial device to the `stream-var' variable,
+   (same syntax as for `stty'), to bind `dual-channel-tty-gray-stream'
+   instances associated with serial device to the `stream-var' variable,
    execute `body', to restore original serial device settings
    after execution of the `body' (in protected part of the
    `unwind-protect' macro) and to close stream.
 
   Checking serial device by Rx<->Tx connection:
-  (with-tty-stream (tty \"/dev/ttyUSB0\" (logior o-rdwr      
+  (with-tty-stream (tty \"/dev/ttyS1\" (logior o-rdwr      
                                                o-nonblock) 
-                        'raw '(parity nil) 'b115200        
-                        '(vmin 0) '(vtime 0))              
-    (let* ((out \"hello\")                                   
-           (ln (length out))                               
-           (in  (make-string ln)))                         
-      (stream-write-sequence tty out 0 ln)
-      (iomux:wait-until-fd-ready (fd-of tty) :input 1 t)
-      (stream-read-sequence tty in 0 ln)                   
-      in))                                                 
+                                'raw '(parity nil) 'b115200        
+                                '(vmin 0) '(vtime 0))              
+            (let* ((out \"hello\")                                   
+                   (ln (length out))                               
+                   (in  (make-string ln)))
+	      (setf (read-timeout tty) .1)
+              (stream-write-sequence tty out 0 ln)
+              (stream-read-sequence tty in 0 ln)                   
+              in))                                                 
   "
-  (with-gensyms (old set)
-  `(let ((,stream-var (open-tty-stream ,path :flag ,flag))
-	 (,set))
-     (with-foreign-object (,old 'termios)
-       (unwind-protect
-	    (progn
-	      (%tcgetattr (input-fd-of ,stream-var) ,old)
-	      (setf ,set (stty (input-fd-of ,stream-var) ,@options))
-	      ,@body)
-	 (progn (if (zerop ,set)
-		    (%tcsetattr (input-fd-of ,stream-var) tcsanow ,old))
-		(close ,stream-var)))))))
+  `(with-open-stream (,stream-var (open-tty-stream ,path
+                                                   :flag ,flag))
+     (stty (fd-of ,stream-var) ,@options)
+     ,@body))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmacro with-raw-serial ((stream path
                                    &key (speed 115200)

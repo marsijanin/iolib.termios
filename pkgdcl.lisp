@@ -136,6 +136,9 @@
    #:%tcsetattr
    ;; classes:
    #:dual-channel-tty-gray-stream
+   ;; serial devices streams timeout accessors:
+   #:read-timeout
+   #:write-timeout
    ;; useful wrapers:
    #:stty
    ;; additional stty options:
