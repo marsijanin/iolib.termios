@@ -25,11 +25,14 @@
 		   :external-format external-format
                    :original-settings termios)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmethod close :before ((stream dual-channel-tty-gray-stream) &key abort)
+;; Close method for dual-channel-single-fd-gray-stream in iolib.streams,
+;; (which call %sys-close) is :around too. 
+(defmethod close :around ((stream dual-channel-tty-gray-stream) &key abort)
   (declare (ignorable abort))
   (%tcsetattr (fd-of stream) tcsanow (original-settings stream))
   (foreign-free (original-settings stream))
-  (setf (slot-value stream 'original-settings) nil))
+  (setf (slot-value stream 'original-settings) nil)
+  (call-next-method))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmethod stream-read-sequence :before ((stream dual-channel-tty-gray-stream)
                                          sequence start end &key)
