@@ -81,7 +81,10 @@
 (defmacro with-raw-serial ((stream path
                                    &key (speed 115200)
                                    (parity :n)
-                                   (byte-size 8))
+                                   (byte-size 8)
+                                   ;; not an posix option
+                                   #+(or bsd linux)hardware-flow-control
+                                   software-flow-control)
                            &body body)
   "Wraper around `with-tty-stream' with a very few number of &key options:
    - speed: baud rate. An integer, this macro will look for a corresponding
@@ -90,7 +93,11 @@
      or `:s' (space parity);
    - byte-size: character size as it described in
      `posix serial programming manual', can be an integer in 5-8 (inclusive)
-     diapason.
+     diapason;
+   - `hardware/software-flow-control' for enable hardware/software flow control
+     (disable by default). Note, what hardware flow control (crtscts) is not an
+     posix feature, so it can be not implemented on some platforms.
+      
 
      I.e. 9600-8n1 mode will be `:speed 9600 :parity :n :byte-size 8',
      and 300-5e1 `:speed 300 :parity :e :byte-size 5'.
@@ -125,6 +132,9 @@
                        (6 `('(cs6 t)))
                        (7 `('(cs7 t)))
                        (8 `('(cs8 t)))
-                       (t (error "Byte size ~a is unsupported" byte-size))))
+                       (t (error "Byte size ~a is unsupported" byte-size)))
+                ;; hardware flow control
+                #+(or bsd linux),@(when hardware-flow-control `('(crtscts t)))
+                ,@(when software-flow-control `('(ixon t) '(ixoff t))))
      ,@body))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
