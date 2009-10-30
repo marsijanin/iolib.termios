@@ -147,7 +147,6 @@
    #:oddp
    #:parity
    #:really-raw
-   #:open-tty-stream
-   #:with-tty-stream
-   #:with-raw-serial))			; </ defpackage >
+   #:open-serial-stream
+   #:with-serial-stream))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

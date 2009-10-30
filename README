@@ -1,16 +1,16 @@
 iolib.termios - an iolib (http://common-lisp.net/project/iolib)
 extension for RS-422/485/232 (aka serial) interfaces - i.e. termios (3)
 api common lisp wrappers.  It is still proof of concept now, and
-currently there is no documentation, except docstrings.
-
-Some notes:
+currently there is no documentation, except docstrings and this readme.
 
 I start wrote this stuff in order to make my code for communication
-with some embedded devices wih via RS-422/485 interface not too
+with some embedded devices with via RS-422/485 interface not too
 implementation depended (I using some sbcl wrappers from sb-posix:
 http://paste.lisp.org/display/87952).  In other words main purpose of
 the iolib.termios is more like to provide a portable way to talk with
 modem from lisp, than to cover all termios features.
+
+API:
 
 Each instance of the `dual-channel-tty-gray-stream' store original
 termios settings (baud rates, control characters values etc.) and
@@ -22,31 +22,45 @@ If you specify `read-timeout' & `write-timeout' options of the
 poll stream `fd' for corresponding i/o operation with specified timeout
 values before reading/writing.
 
-
-Using `with-raw-serial' serial macro is recommended. Syntax is like with-open-file:
- (with-raw-serial (stream path &key (speed 115200) (parity n) (byte-size 8))
+Using `with-serial-stream' macro is recommended. Syntax is like with-open-file:
+ (with-raw-serial (stream path &key
+ 		   (speed 115200)
+		   (parity n)
+		   (byte-size 8)
+		   hardware-flow-control
+		   software-flow-control
+		   (flag (logior o-rdwr o-nonblock))
+                   (mode *default-open-mode*)
+                   (external-format :default)
+		   timeout read-timeout write-timeout)
     &body body)
 
-I.e. you should only specify require baud rate (note, that this macro
+I.e. only serial device pathname is necessary parameter.
+You can specify require baud rate (note, that this macro
 will look for a corresponding baud rate constant and signal en error,
-aif you will try to use nonstandard baud rate), byte/character size and
-parity checking mode. 
+if you will try to use nonstandard baud rate), byte/character size and
+parity checking mode. Also you can turn on hardware/software flow control
+and specify additional stream parameters.
 
-You could also use `with-tty-stream' macro that can give you more
-control.
-
-stty function is like stty shell utility, except that you should
-type 'icanon instead of -icanon to disable feature, '(icanon t)
-instead of `'icanon' to enable feature, '(vtime 1) instead of `vtime
-1' to specify some value. And note that switching to raw mode is just
+`stty' function is like stty shell utility, except that you should
+type "'icanon" instead of "-icanon" to disable feature, "'(icanon t)"
+instead of "icanon" to enable feature, "'(vtime 1)" instead of "vtime 1"
+to specify some value. And note that switching to raw mode is just
 'raw, not '(raw t).
+
+SUPPORTED PLATFORMS:
+
+In theory should work on all posix platforms supported by iolib. 
+
+Currently i run it under sbcl 1.0.31 & 1.0.32 under archlinux and debian lenny,
+clisp 2.47 under archlinux and debian lenny, ccl 1.3 and 1.4 under archlinux.
+(all 32 bit).
 
 TODO:
 
 0 Checking right `#+' and `#-' for non posix features.
 
-1 Testing on other OS and lisp implementation (still sitting down on
-sbcl on 32 bit archlinux). 
+1 Testing on other OS and lisp implementation. 
 
 3 Testing units.
 

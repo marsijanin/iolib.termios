@@ -10,8 +10,8 @@
    (original-settings :reader original-settings :initarg :original-settings))
   (:documentation "Gray stream class for serial devices"))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun open-tty-stream (path
-			&key (flag o-rdwr) (mode *default-open-mode*)
+(defun open-serial-stream (path &key (flag (logior o-rdwr o-nonblock))
+                        (mode *default-open-mode*)
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
    with serial device"
@@ -52,41 +52,19 @@
   (when finish-output
     (stream-finish-output stream)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmacro with-tty-stream ((stream-var path flag &rest options) &body body)
-  "Trying to open serial device by `path', to setup it by specified `options'
-   (same syntax as for `stty'), to bind `dual-channel-tty-gray-stream'
-   instances associated with serial device to the `stream-var' variable,
-   execute `body', to restore original serial device settings
-   after execution of the `body' (in protected part of the
-   `unwind-protect' macro) and to close stream.
-
-  Checking serial device by Rx<->Tx connection:
-  (with-tty-stream (tty \"/dev/ttyS1\" (logior o-rdwr      
-                                               o-nonblock) 
-                                'raw '(parity nil) 'b115200        
-                                '(vmin 0) '(vtime 0))              
-            (let* ((out \"hello\")                                   
-                   (ln (length out))                               
-                   (in  (make-string ln)))
-	      (setf (read-timeout tty) .1)
-              (stream-write-sequence tty out 0 ln)
-              (stream-read-sequence tty in 0 ln)                   
-              in))                                                 
-  "
-  `(with-open-stream (,stream-var (open-tty-stream ,path
-                                                   :flag ,flag))
-     (stty (fd-of ,stream-var) ,@options)
-     ,@body))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmacro with-raw-serial ((stream path
-                                   &key (speed 115200)
-                                   (parity :n)
-                                   (byte-size 8)
-                                   ;; not an posix option
-                                   #+(or bsd linux)hardware-flow-control
-                                   software-flow-control)
-                           &body body)
-  "Wraper around `with-tty-stream' with a very few number of &key options:
+(defmacro with-serial-stream ((stream path
+                                      &key (speed 115200)
+                                      (parity :n)
+                                      (byte-size 8)
+                                      ;; not an posix option
+                                      #+(or bsd linux)hardware-flow-control
+                                      software-flow-control
+                                      (flag (logior o-rdwr o-nonblock))
+                                      (mode *default-open-mode*)
+                                      (external-format :default)
+                                      timeout read-timeout write-timeout)
+                              &body body)
+  "Wrapper around `with-tty-stream' with a few number of settings:
    - speed: baud rate. An integer, this macro will look for a corresponding
      baud rate constant and use it, or signal an error otherwise;
    - parity: one of `:n' (no parity checking), `:e' (even), `:o' (odd),
@@ -97,44 +75,72 @@
    - `hardware/software-flow-control' for enable hardware/software flow control
      (disable by default). Note, what hardware flow control (crtscts) is not an
      posix feature, so it can be not implemented on some platforms.
-      
 
      I.e. 9600-8n1 mode will be `:speed 9600 :parity :n :byte-size 8',
-     and 300-5e1 `:speed 300 :parity :e :byte-size 5'.
+     and 300-5e1 `:speed 300 :parity :e :byte-size 5'. 115200-8n1 is default.
 
-     115200-8n1 is default.
+   Other &key parameters is:
+   - flag & mode: passed to `isys:%sys-open',
+     (logior isys:o-rdwr isys:o-nonblock) & *default-open-mode* by default.
+   - external-format: see babel manual.
+   - stream read/write timeout values: no default values are specified.
+
+
+   Example (if rx of /dev/ttyUSB0 connected with rx should return T):
+   (with-serial-stream (tty \"/dev/ttyUSB0\"   
+                            :speed 57600     
+                            :parity :n)      
+     (let* ((out \"hello\")                    
+            (ln (length out))                
+            (in (make-string ln)))           
+       (setf (itty:read-timeout tty) .1)     
+       (stream-write-sequence tty out 0 ln)  
+       (stream-read-sequence tty in 0 ln)    
+       (string= in out)))                    
   "
-  `(with-tty-stream
-       (,stream ,path (logior o-rdwr o-nonblock)
-                ;; speed first
-                ,@(let* ((sym (find-symbol (format nil "B~a" speed)
-                                          :iolib.termios))
-                        (hash (gethash sym *termios-options*)))
-                        (if (and hash (eql (cdr hash) 'baud-rates))
-                            `(',sym)
-                            (error "Unknown baud rate ~a" speed)))
-                ;; do not block on reading
-                'raw '(vtime 0) '(vmin 0)
-                ;; allways reset csize before set byte size
-                'csize
-                ;; parity
-                ,@(case parity
-                        (:n `('parenb 'cstopb))
-                        (:e `('(parenb t) 'parodd 'cstopb))
-                        (:o `('(parenb t) '(parodd t) 'cstopb))
-                        (:s `('parenb 'parodd 'cstopb))
-                        (t
-                         (error
-                          "Unsupported parity checking mode ~a" parity)))
-                ;; byte size
-                ,@(case byte-size
-                       (5 `('(cs5 t)))
-                       (6 `('(cs6 t)))
-                       (7 `('(cs7 t)))
-                       (8 `('(cs8 t)))
-                       (t (error "Byte size ~a is unsupported" byte-size)))
-                ;; hardware flow control
-                #+(or bsd linux),@(when hardware-flow-control `('(crtscts t)))
-                ,@(when software-flow-control `('(ixon t) '(ixoff t))))
+  `(with-open-stream
+       (,stream (open-serial-stream ,path
+                                    :flag ,flag
+                                    :mode ,mode
+                                    :external-format ,external-format))
+     (stty (fd-of ,stream) 
+           ;; speed first
+           ,@(let* ((sym (find-symbol (format nil "B~a" speed)
+                                      :iolib.termios))
+                    (hash (gethash sym *termios-options*)))
+                   (if (and hash (eql (cdr hash) 'baud-rates))
+                       `(',sym)
+                       (error "Unknown baud rate ~a" speed)))
+           ;; do not block on reading
+           'raw '(vtime 0) '(vmin 0)
+           ;; allways reset csize before set byte size
+           'csize
+           ;; parity
+           ,@(case parity
+                   (:n `('parenb 'cstopb))
+                   (:e `('(parenb t) 'parodd 'cstopb))
+                                 (:o `('(parenb t) '(parodd t) 'cstopb))
+                                 (:s `('parenb 'parodd 'cstopb))
+                                 (t
+                                  (error
+                                   "Unsupported parity checking mode ~a"
+                                   parity)))
+           ;; byte size
+           ,@(case byte-size
+                   (5 `('(cs5 t)))
+                   (6 `('(cs6 t)))
+                   (7 `('(cs7 t)))
+                   (8 `('(cs8 t)))
+                   (t (error "Byte size ~a is unsupported" byte-size)))
+           ;; hardware flow control
+           #+(or bsd linux),@(when hardware-flow-control `('(crtscts t)))
+           ,@(when software-flow-control `('(ixon t) '(ixoff t))))
+     ,(when timeout
+            `(setf (read-timeout ,stream) ,timeout)
+            `(setf (read-timeout ,stream) ,timeout))
+     ,(when read-timeout
+            `(setf (read-timeout ,stream) ,read-timeout))
+     ,(when write-timeout
+            `(setf (write-timeout ,stream) ,write-timeout))
      ,@body))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
