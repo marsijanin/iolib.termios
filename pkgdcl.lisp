@@ -148,5 +148,7 @@
    #:parity
    #:really-raw
    #:open-serial-stream
-   #:with-serial-stream))			; </ defpackage >
+   #:with-serial-stream
+   ;; List of all open serial streams. Could be used in signal handlers.
+   #:*open-serial-streams*))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

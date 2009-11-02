@@ -1,20 +1,24 @@
 iolib.termios - an iolib (http://common-lisp.net/project/iolib)
 extension for RS-422/485/232 (aka serial) interfaces - i.e. termios (3)
 api common lisp wrappers.  It is still proof of concept now, and
-currently there is no documentation, except docstrings and this readme.
+there is no documentation either, except for docstrings and this readme.
 
-I start wrote this stuff in order to make my code for communication
-with some embedded devices with via RS-422/485 interface not too
-implementation depended (I using some sbcl wrappers from sb-posix:
-http://paste.lisp.org/display/87952).  In other words main purpose of
-the iolib.termios is more like to provide a portable way to talk with
+I started writing this stuff in order to make my code for communication
+with some embedded devices with via RS-422/485 interface not depended
+on implementation (I used some sbcl wrappers from sb-posix:
+http://paste.lisp.org/display/87952).  In other words the main purpose of
+the iolib.termios is more likely to provide a portable way to talk with
 modem from lisp, than to cover all termios features.
 
 API:
 
-Each instance of the `dual-channel-tty-gray-stream' store original
+Each instance of the `dual-channel-tty-gray-stream' stores original
 termios settings (baud rates, control characters values etc.) and
-call `close' on such stream will restore this settings. 
+the call of `close' on such stream will restore this settings. 
+*open-serial-streams* variable give you access to the list of all open
+instances of the `dual-channel-tty-gray-stream', so you can call
+(map 'nil #'closr *open-serial-streams*) or something like that
+in signal handler.
 
 If you specify `read-timeout' & `write-timeout' options of the
 `dual-channel-tty-gray-stream' (via `setf'), then
@@ -22,7 +26,8 @@ If you specify `read-timeout' & `write-timeout' options of the
 poll stream `fd' for corresponding i/o operation with specified timeout
 values before reading/writing.
 
-Using `with-serial-stream' macro is recommended. Syntax is like with-open-file:
+Usage of `with-serial-stream' macro is recommended. Syntax is like 
+`with-open-file':
  (with-raw-serial (stream path &key
  		   (speed 115200)
 		   (parity n)
@@ -38,21 +43,21 @@ Using `with-serial-stream' macro is recommended. Syntax is like with-open-file:
 I.e. only serial device pathname is necessary parameter.
 You can specify require baud rate (note, that this macro
 will look for a corresponding baud rate constant and signal en error,
-if you will try to use nonstandard baud rate), byte/character size and
+if you try to use nonstandard baud rate), byte/character size and
 parity checking mode. Also you can turn on hardware/software flow control
 and specify additional stream parameters.
 
-`stty' function is like stty shell utility, except that you should
+`stty' function is like `stty' shell utility, except for you should
 type "'icanon" instead of "-icanon" to disable feature, "'(icanon t)"
 instead of "icanon" to enable feature, "'(vtime 1)" instead of "vtime 1"
-to specify some value. And note that switching to raw mode is just
-'raw, not '(raw t).
+to specify some value. And switching to raw mode is just
+"'raw", not "'(raw t)".
 
 SUPPORTED PLATFORMS:
 
-In theory should work on all posix platforms supported by iolib. 
+In theory it should work on all posix platforms supported by iolib. 
 
-Currently i run it under sbcl 1.0.31 & 1.0.32 under archlinux and debian lenny,
+I run it under sbcl 1.0.31 & 1.0.32 under archlinux and debian lenny,
 clisp 2.47 under archlinux and debian lenny, ccl 1.3 and 1.4 under archlinux.
 (all 32 bit).
 

@@ -10,20 +10,32 @@
    (original-settings :reader original-settings :initarg :original-settings))
   (:documentation "Gray stream class for serial devices"))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Unix signals such SIGTERM etc. are not usual conditions so with-open-stream
+;; macro can't call close in order to restore original settings.
+;; On the other hand installing signal handler is not a part
+;; of the common-lip standard and not a purpose of this library.
+;; So i guess that provide a list of open serial devices streams
+;; for library users will be better solution.
+(defparameter *open-serial-streams* nil
+  "List of all open serial streams for restoring original serial devices
+   settings via signal handlers.")
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun open-serial-stream (path &key (flag (logior o-rdwr o-nonblock))
                         (mode *default-open-mode*)
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
-   with serial device"
+   with serial device and push in into the `*open-serial-streams*' list"
   (let ((fd (%sys-open path flag mode))
         (termios (foreign-alloc 'termios)))
     (%tcgetattr fd termios)
-    (make-instance 'dual-channel-tty-gray-stream
-		   :input-fd fd
-		   :output-fd fd
-		   :path path
-		   :external-format external-format
-                   :original-settings termios)))
+    (let ((s (make-instance 'dual-channel-tty-gray-stream
+                            :input-fd fd
+                            :output-fd fd
+                            :path path
+                            :external-format external-format
+                            :original-settings termios)))
+      (push s *open-serial-streams*)
+      s)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Close method for dual-channel-single-fd-gray-stream in iolib.streams,
 ;; (which call %sys-close) is :around too. 
@@ -32,7 +44,8 @@
   (when (fd-of stream)
     (%tcsetattr (fd-of stream) tcsanow (original-settings stream))
     (foreign-free (original-settings stream))
-    (setf (slot-value stream 'original-settings) nil))
+    (setf (slot-value stream 'original-settings) nil)
+    (removef *open-serial-streams* stream))
   (call-next-method))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defmethod stream-read-sequence :before ((stream dual-channel-tty-gray-stream)
