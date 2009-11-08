@@ -7,7 +7,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (asdf:defsystem :iolib.termios
   :description "Termios (3p) api wrappers"
-  :maintainer "Razbegaiv N.V. <marsijanin@gmail.com>"
+  :maintainer "Razbegaev N.V. <marsijanin@gmail.com>"
   :licence "MIT"
   :depends-on (:iolib.base :iolib.syscalls :iolib.streams :cffi :cffi-grovel)
   :components

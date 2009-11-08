@@ -15,9 +15,9 @@ API:
 Each instance of the `dual-channel-tty-gray-stream' stores original
 termios settings (baud rates, control characters values etc.) and
 the call of `close' on such stream will restore this settings. 
-*open-serial-streams* variable give you access to the list of all open
+`*open-serial-streams*' variable give you access to the list of all open
 instances of the `dual-channel-tty-gray-stream', so you can call
-(map 'nil #'closr *open-serial-streams*) or something like that
+(map 'nil #'close *open-serial-streams*) or something like that
 in signal handler.
 
 If you specify `read-timeout' & `write-timeout' options of the
