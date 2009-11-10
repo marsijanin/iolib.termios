@@ -189,10 +189,45 @@
 	       (t (if (atom option)
 		      (set-termios-option termios option)
 		      (set-termios-option termios (first option)
-					  (second option)))))))
-    (with-foreign-object (ptr 'termios)
-      (%tcgetattr fd ptr)
+					  (second option))))))
+           (compare-termios (set test)
+             (and
+              (every #'(lambda (flag)
+                         (=  (foreign-slot-value set  'termios flag)
+                             (foreign-slot-value test 'termios flag)))
+                     '(iflag oflag cflag lflag))
+              (dotimes (i nccs t)
+                (when
+                    (/= (mem-aref (foreign-slot-pointer set
+                                                        'termios
+                                                        'control-chars)
+                                  'cc
+                                  i)
+                        (mem-aref (foreign-slot-pointer test
+                                                        'termios
+                                                        'control-chars)
+                                  'cc
+                                  i))
+                  (return nil))))))
+    (with-foreign-objects ((set  'termios)
+                           (test 'termios))
+      (%tcgetattr fd set)
+      ;; As said in man termios:
+      ;; "tcsetattr() returns success if any of the
+      ;; requested changes could be successfully carried out."
+      ;; This manual also recomend to use tcgetattr() in oder to check
+      ;; all performed settings. But I really dot't like to find back
+      ;; that each zero ore one in coresponding field mead. So I prefer
+      ;; to process each option step by step and singnal a condition
+      ;; when there will be a difference:
       (dolist (option options)
-	(process-option option ptr))
-      (%tcsetattr fd tcsanow ptr))))
+	(process-option option set)
+        (%tcsetattr fd tcsanow set)
+        (%tcgetattr fd test)
+        (or (compare-termios set test)
+            (if (member option *baud-rates*)
+                (error 'termios-speed-failled
+                       :request (parse-integer (symbol-name option) :start 1))
+                (error 'termios-set-failled
+                       :request option)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -141,6 +141,10 @@
    #:write-timeout
    ;; useful wrapers:
    #:stty
+   ;; coditions:
+   #:termios-error
+   #:termios-set-failled
+   #:termios-speed-failled
    ;; additional stty options:
    #:raw
    #:cooked
@@ -150,5 +154,7 @@
    #:open-serial-stream
    #:with-serial-stream
    ;; List of all open serial streams. Could be used in signal handlers.
-   #:*open-serial-streams*))			; </ defpackage >
+   #:*open-serial-streams*
+   ;; Known baud rates constants list  
+   #:*baud-rates*))			; </ defpackage >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
