@@ -150,26 +150,36 @@
 ;; I guess that bits manipulation stuff is not a lisp way,
 ;; and using a kind of `stty (1p)' will be more lisp kind
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun stty (fd &rest options)
-  "Impliment stty (1p) in lisp way.
+(defun stty (serial &rest options)
+  "Impliment stty (1) in lisp way.
+   `serial' can be stream or fd.
    Each `options' element should be termios option name
    or list in (option-name option-value) form.
    '(flag-name t) set corresponding flag,
    '(flag-name nil) or 'flag-name reset it.
    'baud-rate-constant set corresponding speed.
    '(control-character-name control-character-value) setup corresponding
-    control character value.
+   control character value.
+   Baud rate can be specified in integer form to.
    
    Setup for 8n1 mode: (stty fd '(evenp nil))
-   Setup speed: (stty fd 'b115200)
+   Setup speed: (stty fd 'b115200) or (stty my-stream 115200)
    Setup raw mode: (stty fd 'raw) 
    Setup cooked mode: (stty fd '(raw nil) or (stty 'cooked)
   "
   (labels ((process-option (option termios)
 	     (cond 
-	       ((member option *baud-rates*)
-		(%cfsetispeed termios (symbol-value option))
-		(%cfsetospeed termios (symbol-value option)))
+	       ((or (member option *baud-rates*)
+                    (integerp option))
+                (let* ((sym (if (integerp option)
+                                (find-symbol (format nil "B~a" option)
+                                             :iolib.termios)
+                                option))
+                       (hash (gethash sym *termios-options*)))
+                  (unless (and hash (eql (cdr hash) 'baud-rates))
+                    (error "Unknown baud rate ~a" option))
+		(%cfsetispeed termios (symbol-value sym))
+		(%cfsetospeed termios (symbol-value sym))))
 	       ((member option '(evenp 'parity))
 		(make-evenp-termios termios))
 	       ((eq option 'oddp)
@@ -209,6 +219,10 @@
                                   'cc
                                   i))
                   (return nil))))))
+    (let ((fd (typecase serial
+                (integer serial)
+                (stream (fd-of serial))
+                (t (error "You should specify stream or fd")))))
     (with-foreign-objects ((set  'termios)
                            (test 'termios))
       (%tcgetattr fd set)
@@ -225,9 +239,12 @@
         (%tcsetattr fd tcsanow set)
         (%tcgetattr fd test)
         (or (compare-termios set test)
-            (if (member option *baud-rates*)
+            (if (or (member option *baud-rates*) (integerp option))
                 (error 'termios-speed-failled
-                       :request (parse-integer (symbol-name option) :start 1))
+                       :request (if (integerp option)
+                                    option
+                                    (parse-integer (symbol-name option)
+                                                   :start 1)))
                 (error 'termios-set-failled
-                       :request option)))))))
+                       :request option))))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -51,7 +51,8 @@ and specify additional stream parameters.
 type "'icanon" instead of "-icanon" to disable feature, "'(icanon t)"
 instead of "icanon" to enable feature, "'(vtime 1)" instead of "vtime 1"
 to specify some value. And switching to raw mode is just
-"'raw", not "'(raw t)".
+"'raw", not "'(raw t)". Also, baud rate can be specified in integer
+(i.e. 115200) and symbol-constant (i.e. 'b115200) form.
 
 SUPPORTED PLATFORMS:
 
@@ -65,7 +66,10 @@ TODO:
 
 0 Checking right `#+' and `#-' for non posix features.
 
-1 Testing on other OS and lisp implementation. 
+1 Define termios constants via constantenum and change stty syntax
+  (keywords parameters).
+
+2 Testing on other OS and lisp implementation. 
 
 3 Testing units.
 

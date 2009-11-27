@@ -77,9 +77,10 @@
                                       (external-format :default)
                                       timeout read-timeout write-timeout)
                               &body body)
-  "Wrapper around `with-tty-stream' with a few number of settings:
-   - speed: baud rate. An integer, this macro will look for a corresponding
-     baud rate constant and use it, or signal an error otherwise;
+  "Wrapper around `with-open-stream' with a few settings for serial device:
+   - speed: baud rate. An integer (stty will look for a corresponding
+     baud rate constant and use it, or signal an error otherwise),
+     or constant symbol;
    - parity: one of `:n' (no parity checking), `:e' (even), `:o' (odd),
      or `:s' (space parity);
    - byte-size: character size as it described in
@@ -116,14 +117,9 @@
                                     :flag ,flag
                                     :mode ,mode
                                     :external-format ,external-format))
-     (stty (fd-of ,stream) 
+     (stty ,stream
            ;; speed first
-           ,@(let* ((sym (find-symbol (format nil "B~a" speed)
-                                      :iolib.termios))
-                    (hash (gethash sym *termios-options*)))
-                   (if (and hash (eql (cdr hash) 'baud-rates))
-                       `(',sym)
-                       (error "Unknown baud rate ~a" speed)))
+           ,speed
            ;; do not block on reading
            'raw '(vtime 0) '(vmin 0)
            ;; allways reset csize before set byte size
