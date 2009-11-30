@@ -3,19 +3,20 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defsyscall (%cfgetispeed "cfgetispeed") termios-speed
+;; No errors are defined for cfget{i,o}speed, so I'm using defcfun* 
+(defcfun* (%cfgetispeed "cfgetispeed") baud-rate
   (termios :pointer))			; const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defsyscall (%cfgetospeed "cfgetospeed") termios-speed
+(defcfun* (%cfgetospeed "cfgetospeed") baud-rate
   (termios :pointer))			; const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%cfsetispeed "cfsetispeed") :int
   (termios :pointer)			; struct termios *
-  (speed   termios-speed))
+  (speed   baud-rate))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%cfsetospeed "cfsetospeed") :int
   (termios :pointer) 			; struct termios *	
-  (speed   termios-speed))
+  (speed   baud-rate))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%tcdrain "tcdrain") :int
   (fd :int))
@@ -41,6 +42,6 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%tcsetattr "tcsetattr") (:int :restart t :handle fd)
   (fd             :int)
-  (optional-ation :int)
+  (optional-ation tcssetattr-action)
   (termios        :pointer))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

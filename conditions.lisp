@@ -11,16 +11,28 @@
   ((request :initarg :request :reader request))
   (:report
    (lambda (c s)
-     (declare (ignorable c))
      (format s "Failled apply ~a request on serial device" (request c))))
   (:documentation
    "Signalled when `stty' failled to apply one of the requested settings"))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define-condition termios-speed-failled (termios-set-failled)
+(define-condition termios-set-baud-rate-failled (termios-set-failled)
   ()
   (:report
    (lambda (c s)
-     (declare (ignorable c))
-     (format s "Failled to setup ~a baud speed on serial device" (request c))))
-  (:documentation "Signalled by `stty' when requested speed is unsupported"))
+     (format s "Failled to setup ~a termios baud rate" (request c))))
+  (:documentation "Signalled when requested baud rate is unsupported"))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-condition termios-set-flag-failled (termios-set-failled)
+  ()
+  (:report
+   (lambda (c s)
+     (format s "Failled to setup ~a termios flag" (request c))))
+  (:documentation "Signalled when requested flag is unsupported"))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-condition termios-set-control-character-failled (termios-set-failled)
+  ()
+  (:report
+   (lambda (c s)
+     (format s "Failled to setup ~a termios control character" (request c))))
+  (:documentation "Signalled when requested control character is unsupported"))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

@@ -29,30 +29,29 @@ values before reading/writing.
 Usage of `with-serial-stream' macro is recommended. Syntax is like 
 `with-open-file':
  (with-raw-serial (stream path &key
- 		   (speed 115200)
+ 		   (speed :b115200)
 		   (parity n)
 		   (byte-size 8)
 		   hardware-flow-control
 		   software-flow-control
-		   (flag (logior o-rdwr o-nonblock))
+		   (flag (logior o-rdwr o-nonblock o-noctty))
                    (mode *default-open-mode*)
                    (external-format :default)
 		   timeout read-timeout write-timeout)
     &body body)
 
-I.e. only serial device pathname is necessary parameter.
-You can specify require baud rate (note, that this macro
-will look for a corresponding baud rate constant and signal en error,
-if you try to use nonstandard baud rate), byte/character size and
-parity checking mode. Also you can turn on hardware/software flow control
-and specify additional stream parameters.
+I.e. only serial device pathname is necessary parameter.  You can
+specify require baud rate (in keyword form: `:b9600` and so),
+byte/character size and parity checking mode. Also you can turn on
+hardware/software flow control and specify additional stream
+parameters. Note, that this macro will allways set `raw` mode, so if
+you prefer `canonical` mode you should use `with-open-stream` and
+`stty` (see below) instead.
 
-`stty' function is like `stty' shell utility, except for you should
-type "'icanon" instead of "-icanon" to disable feature, "'(icanon t)"
-instead of "icanon" to enable feature, "'(vtime 1)" instead of "vtime 1"
-to specify some value. And switching to raw mode is just
-"'raw", not "'(raw t)". Also, baud rate can be specified in integer
-(i.e. 115200) and symbol-constant (i.e. 'b115200) form.
+`stty` function is like `stty' shell utility:
+  (stty fd :b115200 :raw t :hupcl nil)
+
+
 
 SUPPORTED PLATFORMS:
 
@@ -66,14 +65,11 @@ TODO:
 
 0 Checking right `#+' and `#-' for non posix features.
 
-1 Define termios constants via constantenum and change stty syntax
-  (keywords parameters).
+1 Testing on other OS and lisp implementation. 
 
-2 Testing on other OS and lisp implementation. 
+2 Testing units.
 
-3 Testing units.
+3 Restarts on i/o methods.
 
-4 Restarts on i/o methods.
-
-5 Streams class and methods for 9-bit mode (using parity checking bits
-for data too). 
+4 Streams class and methods for 9-bit mode (using parity checking bits
+  for data too). 

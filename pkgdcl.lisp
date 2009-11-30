@@ -9,119 +9,13 @@
   (:export
    ;; Struct termios:
    #:termios
-   ;; cflags:
-   #:cbaud
-   #:exta
-   #:extb
-   #:csize
-   #:cs5
-   #:cs6
-   #:cs7
-   #:cs8
-   #:cstopb
-   #:cread
-   #:parenb
-   #:parodd
-   #:hupcl
-   #:clocal
-   #:loblk
-   #:crtscts
-   ;; baud rates:
-   #:b0
-   #:b50
-   #:b75
-   #:b110
-   #:b134
-   #:b150
-   #:b200
-   #:b300
-   #:b600
-   #:b1200
-   #:b1800
-   #:b2400
-   #:b4800
-   #:b9600
-   #:b19200
-   #:b38400
-   #:b57600
-   #:b76800
-   #:b115200
-   ;; tcsetattr actions:
-   #:tcsanow
-   #:tcsadrain
-   #:tcsaflush
-   ;; lflags:
-   #:isig
-   #:icanon
-   #:xcase
-   #:echo
-   #:echoe
-   #:echok
-   #:echonl
-   #:noflsh
-   #:iexten
-   #:echoctl
-   #:echoprt
-   #:echoke
-   #:flusho
-   #:pendin
-   #:tostop
-   ;; iflags:
-   #:inpck
-   #:ignpar
-   #:parmrk
-   #:istrip
-   #:ixon
-   #:ixoff
-   #:ixany
-   #:ignbrk
-   #:brkint
-   #:inlcr
-   #:igncr
-   #:icrnl
-   #:iuclc
-   #:imaxbel
-   ;; oflags:
-   #:opost
-   #:olcuc
-   #:onlcr
-   #:ocrnl
-   #:nocr
-   #:onlret
-   #:ofill
-   #:ofdel
-   #:nldly
-   #:nl0
-   #:nl1
-   #:crdly
-   #:cr0
-   #:cr1
-   #:cr2
-   #:cr3
-   #:tabdly
-   #:tab0
-   #:tab1
-   #:tab2
-   #:tab3
-   #:bsdly
-   #:bs0
-   #:bs1
-   #:vtdly
-   #:vt0
-   #:vt1
-   #:ffdly
-   #:ff0
-   #:ff1
-   ;; control characters:
-   #:vintr
-   #:vquit
-   #:verase
-   #:vkill
-   #:veof
-   #:veol
-   #:veol2
-   #:vmin
-   #:vtime
+   ;; and settings constantenums
+   #:iflag
+   #:oflag
+   #:cflag
+   #:lflag
+   #:control-character
+   #:baud-rate
    ;; termios.h (0p) functions:
    #:%cfgetispeed
    #:%cfgetospeed
@@ -144,17 +38,12 @@
    ;; coditions:
    #:termios-error
    #:termios-set-failled
-   #:termios-speed-failled
-   ;; additional stty options:
-   #:raw
-   #:cooked
-   #:oddp
-   #:parity
-   #:really-raw
+   #:termios-set-flag-failled
+   #:termios-set-control-character-failled
+   #:termios-set-baud-rate-failled
+   ;; serila stream manipulation
    #:open-serial-stream
    #:with-serial-stream
-   ;; List of all open serial streams. Could be used in signal handlers.
-   #:*open-serial-streams*
-   ;; Known baud rates constants list  
-   #:*baud-rates*))			; </ defpackage >
+   ;; List of all open serial streams. Can be used in signal handlers.
+   #:*open-serial-streams*))            ;</ defpackage>
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

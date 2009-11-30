@@ -3,148 +3,118 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Sort flags by termios fileds:
-;; (as described in ,,Posix serial programming manual``)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; don't using defconstant case sbcl singnal constant redefining error
-;; with and w/o eval-when case results are not eql
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(eval-when (:compile-toplevel :load-toplevel)
-  (defparameter *cflags* '(cbaud cbaudex csize cs5 cs6 cs7 cs8 cstopb cread
-                           parenb parodd hupcl clocal loblk cibaud cmspar
-                           crtscts)
-    "Termios cflag filed constant")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *baud-rates* '(b0 b50 b75 b110 b134 b150 b200 b300 b600 b1200
-                               b1800 b2400 b4800 b9600 b19200 b38400 b57600
-                               b115200 b230400 b460800 b500000 b576000 b921600
-                               b1000000 b1152000 b1500000 b2000000 b2500000
-                               b3000000 b3500000 b4000000)
-    "Baud rates constants")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *tcssetattr-actions* '(tcsanow tcsadrain tcsaflush)
-    "Valid constants for tcsetattr action parameter")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *lflags* '(isig icanon xcase echo echoe echok echonl echoctl
-                           echoprt echoke defecho flusho noflsh tostop pendin
-                           iexten)
-    "Termios lflag filed constants")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *iflags* '(ignbrk brkint ignpar parmrk inpck istrip inlcr igncr
-                           icrnl iuclc ixon ixany ixoff imaxbel iutf8)
-    "Termios iflag filed constants")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *oflags* '(opost olcuc onlcr ocrnl onocr onlret ofill ofdel
-                           nldly crdly tabdly bsdly vtdly ffdly)
-    "Termios oflag filed constants")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *control-characters* '(vintr vquit verase vkill veof vmin veol
-                                       vtime veol2 vswtch vstart vstop vsusp
-                                       vdsusp vlnext vwerase vreprint vdiscard
-                                       vstatus)
-    "Termios control character constants for termios cc field")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defparameter *termios-options* (make-hash-table :test #'eql)
-    "Hash table of all valid termios options.
-     Each entry is dot pair in (<option value> . <option designation>) form,
-     i.e. (2 . lflag) etc.")
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (defmacro define-termios-option (option filed)
-    "Fill `*termios-options*' hash-table with valid termios options values."
-    `(when (boundp ,option)
-       (setf (gethash ,option *termios-options*)
-             (cons (symbol-value ,option) ',filed))))
-  ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  ;; Filling *termios-options*
-  (mapcar #'(lambda (x) (define-termios-option x iflag)) *iflags*)
-  (mapcar #'(lambda (x) (define-termios-option x oflag)) *oflags*)
-  (mapcar #'(lambda (x) (define-termios-option x lflag)) *lflags*)
-  (mapcar #'(lambda (x) (define-termios-option x cflag)) *cflags*)
-  (mapcar #'(lambda (x) (define-termios-option x control-chars))
-          *control-characters*)
-  (mapcar #'(lambda (x) (define-termios-option x baud-rates))
-          *baud-rates*))                ;</ (eval-when
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; </ Termios flags by fields >
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; < Termios options manipulation routines >
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun set-termios-option (termios flag-or-control-character &optional value)
-  "Setup termios flag or control character. If `flag-or-control-character'
-   is one of the termios flags (i.e. icanon) and `value' is not specified
-   then flag in corresponding termios field is reseted, otherwise seted.
-   If  `flag-or-control-character' is control character corresponding
-   value in termios cc field is seted to the `value' parameter.
-
-   Reset icanon flag: (set-termios-option term 'icanon)
-   Set   icanon flag: (set-termios-option term 'icanon t)
-   Set vtime value to 0: (set-termios-option 'vtime 0)
+;; <Termios options manipulation routines>
+(defmacro membercase (form &rest clauses)
+  "(membercase 'a 
+	    ('(b c e) 1)
+	    ('(e d b) 2)
+	    ('(a b c) 3))
+    ==> 3
   "
-  (let ((flag-value (gethash flag-or-control-character *termios-options*)))
-    (cond
-      ;; on of the {c,l,i,o}flag fields options:
-      ((member (cdr flag-value) '(iflag oflag cflag lflag) :test #'eql)
-       (setf (foreign-slot-value termios 'termios (cdr flag-value))
-             ;; value specified => set (logior), reset over otherwise
-             (funcall (if value #'logior #'logandc2)
-                      (foreign-slot-value termios 'termios (cdr flag-value))
-                      (car flag-value))))
-      ;; control characters
-      ((eql (cdr flag-value) 'control-chars)
-       (setf (mem-aref (foreign-slot-pointer termios
-                                             'termios
-                                             'control-chars)
+  `(cond ,@(mapcar #'(lambda (x)
+                       (let ((lst (first x))
+                             (body (rest x)))
+                         `((member ,form ,lst) ,@body)))
+                   clauses)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro enumcase (form &rest clauses)
+  "(enumcase :b115200
+		   (baud-rates 1)
+		   (iflags 2)
+   		   (cflags 3))
+   ==> 1
+  "
+  `(membercase ,form ,@(mapcar #'(lambda (x)
+                                   (let ((enum (first x))
+                                         (body (rest x)))
+                                     `((foreign-enum-keyword-list ',enum)
+                                       ,@body)))
+                               clauses)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun which-termios-keyword (keyword)
+  (enumcase keyword
+   (iflag 'iflag)
+   (oflag 'oflag)
+   (lflag 'lflag)
+   (cflag 'cflag)
+   (control-character 'control-character)
+   (baud-rate 'baud-rate)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun termios-flag-p (keyword)
+  (member (which-termios-keyword keyword) '(iflag oflag cflag lflag)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun termios-control-character-p (keyword)
+  (eql 'control-character (which-termios-keyword keyword)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun termios-baud-rate-p (keyword)
+  (eql 'baud-rate (which-termios-keyword keyword)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun setup-termios-flag (termios flag &optional setp)
+  "Reset `flag' in corresponding `termios' field, or set in, if `setp' is true."
+  (let ((type (which-termios-keyword flag)))
+    (unless type
+      (error "Unknown termios option ~a" flag))
+    (setf (foreign-slot-value termios 'termios type)
+            ;; value specified => set (logior), reset over otherwise
+            (funcall (if setp #'logior #'logandc2)
+                     (foreign-slot-value termios 'termios type)
+                     (foreign-enum-value type flag)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun setup-termios-control-character (termios cc value)
+  "Setup corresponding control character value.
+   Value can be `control-character' keyword or integer."
+  (setf (mem-aref (foreign-slot-pointer termios
+                                        'termios
+                                        'control-chars)
                        'cc
-                       (car flag-value)) ;constant name is offset
-             value))
-      ;; baud-rates
-      ((eql (cdr flag-value) 'baud-rates)
-       (%cfsetispeed termios (car flag-value))
-       (%cfsetospeed termios (car flag-value)))
-      (t (error "Unknown termios option ~a" flag-or-control-character)))
-    termios))
+                       ;; constant name is offset
+                       (foreign-enum-value 'control-character cc)) 
+        (if (integerp value)
+            value
+            (foreign-enum-value 'control-character value))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-raw-termios (termios)
   "Same effect as cfmakeraw()"
-  (dolist (flag '(ignbrk brkint parmrk istrip inlcr igncr icrnl ixon ;iflag
-		  opost						     ;oflag
-		  echo echonl icanon isig iexten		     ;lflag
-		  csize parenb))				     ;cflag
-    (set-termios-option termios flag))
-  (set-termios-option termios 'cs8 t))
+  (dolist (flag
+            '(:ignbrk :brkint :parmrk :istrip :inlcr :igncr :icrnl :ixon ;iflag
+              :opost						         ;oflag
+              :echo :echonl :icanon :isig :iexten		         ;lflag
+              :csize :parenb))				                 ;cflag
+    (setup-termios-flag termios flag))
+  (setup-termios-flag termios :cs8 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-cooked-termios (termios)
   "Effect is opposite to `make-raw-termios'"
-  (dolist (flag '(ignbrk brkint parmrk istrip inlcr igncr icrnl ixon ;iflag
-		  opost						     ;oflag
-		  echo echonl icanon isig iexten		     ;lflag
-		  csize parenb))				     ;cflag
-    (set-termios-option termios flag t))
+  (dolist (flag
+            '(:ignbrk :brkint :parmrk :istrip :inlcr :igncr :icrnl :ixon ;iflag
+              :opost						         ;oflag
+              :echo :echonl :icanon :isig :iexten	                 ;lflag
+              :csize :parenb))				                 ;cflag
+    (setup-termios-flag termios flag t))
   #|(set-termios-option termios 'cs8 t)|#)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-evenp-termios (termios)
   "Enable parenb and cs7; disable parodd"
-  (set-termios-option termios 'parenb t)
-  (set-termios-option termios 'parodd)
-  (set-termios-option termios 'cstopb)
-  (set-termios-option termios 'csize)
-  (set-termios-option termios 'cs7 t))
+  (setup-termios-flag termios :parenb t)
+  (setup-termios-flag termios :parodd)
+  (setup-termios-flag termios :cstopb)
+  (setup-termios-flag termios :csize)
+  (setup-termios-flag termios :cs7 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-oddp-termios (termios)
   "Enable parenb, cs7, and parodd"
-  (set-termios-option termios 'parenb t)
-  (set-termios-option termios 'parodd t)
-  (set-termios-option termios 'cstopb)
-  (set-termios-option termios 'csize)
-  (set-termios-option termios 'cs7 t))
+  (setup-termios-flag termios :parenb t)
+  (setup-termios-flag termios :parodd t)
+  (setup-termios-flag termios :cstopb)
+  (setup-termios-flag termios :csize)
+  (setup-termios-flag termios :cs7 t))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun make-8n1-termios (termios)
   "Disable parenb, and set cs8."
-  (set-termios-option termios 'parenb)
-  (set-termios-option termios 'cstopb)
-  (set-termios-option termios 'csize)
-  (set-termios-option termios 'cs8 t))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+  (setup-termios-flag termios :parenb)
+  (setup-termios-flag termios :cstopb)
+  (setup-termios-flag termios :csize)
+  (setup-termios-flag termios :cs8 t))
 ;; </ Termios options manipulation routines >
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; I guess that bits manipulation stuff is not a lisp way,
@@ -152,99 +122,106 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defun stty (serial &rest options)
   "Impliment stty (1) in lisp way.
-   `serial' can be stream or fd.
-   Each `options' element should be termios option name
-   or list in (option-name option-value) form.
-   '(flag-name t) set corresponding flag,
-   '(flag-name nil) or 'flag-name reset it.
-   'baud-rate-constant set corresponding speed.
-   '(control-character-name control-character-value) setup corresponding
-   control character value.
-   Baud rate can be specified in integer form to.
+   `serial` can be stream or fd.
+   `options` should be list of termios keywords and values:
+   `nil` or `t` for flags or one of `:raw`, `:cooked`, `:evenp` or `:oddp`,
+   integers for control characters.
+  
+   `:inlcr t` set corresponding flag,
+   `:inlcr nil` reset it,
+   `:b115200` set corresponding speed,
+   `:vtime 0` setup corresponding control character value.
    
-   Setup for 8n1 mode: (stty fd '(evenp nil))
-   Setup speed: (stty fd 'b115200) or (stty my-stream 115200)
-   Setup raw mode: (stty fd 'raw) 
-   Setup cooked mode: (stty fd '(raw nil) or (stty 'cooked)
+   Setup for 8n1 mode: `(stty fd :evenp nil)`
+   Setup speed: `(stty fd :b115200)` or `(stty my-stream 115200)`
+   Setup raw mode and speed: `(stty fd :b115200 :raw t)` 
+   Setup cooked mode: `(stty fd :raw nil)`
   "
-  (labels ((process-option (option termios)
-	     (cond 
-	       ((or (member option *baud-rates*)
-                    (integerp option))
-                (let* ((sym (if (integerp option)
-                                (find-symbol (format nil "B~a" option)
-                                             :iolib.termios)
-                                option))
-                       (hash (gethash sym *termios-options*)))
-                  (unless (and hash (eql (cdr hash) 'baud-rates))
-                    (error "Unknown baud rate ~a" option))
-		(%cfsetispeed termios (symbol-value sym))
-		(%cfsetospeed termios (symbol-value sym))))
-	       ((member option '(evenp 'parity))
-		(make-evenp-termios termios))
-	       ((eq option 'oddp)
-		(make-oddp-termios termios))
-	       ((and (consp option)
-		     (null (second option))
-		     (member (first option)
-			     '(parity  evenp oddp)))
-		(make-8n1-termios termios))
-	       ((eql option 'raw)
-		(make-raw-termios termios))
-	       ((or (eql option 'cooked)
-		    (and (consp option)
-			 (eql (first option) 'raw)
-			 (null (second option))))
-		(make-cooked-termios termios))
-	       (t (if (atom option)
-		      (set-termios-option termios option)
-		      (set-termios-option termios (first option)
-					  (second option))))))
-           (compare-termios (set test)
-             (and
-              (every #'(lambda (flag)
-                         (=  (foreign-slot-value set  'termios flag)
-                             (foreign-slot-value test 'termios flag)))
-                     '(iflag oflag cflag lflag))
-              (dotimes (i nccs t)
-                (when
-                    (/= (mem-aref (foreign-slot-pointer set
-                                                        'termios
-                                                        'control-chars)
-                                  'cc
-                                  i)
-                        (mem-aref (foreign-slot-pointer test
-                                                        'termios
-                                                        'control-chars)
-                                  'cc
-                                  i))
-                  (return nil))))))
-    (let ((fd (typecase serial
-                (integer serial)
-                (stream (fd-of serial))
-                (t (error "You should specify stream or fd")))))
-    (with-foreign-objects ((set  'termios)
-                           (test 'termios))
-      (%tcgetattr fd set)
+  (labels
       ;; As said in man termios:
-      ;; "tcsetattr() returns success if any of the
-      ;; requested changes could be successfully carried out."
+      ;; >tcsetattr() returns success if any of the
+      ;; >requested changes could be successfully carried out."
       ;; This manual also recomend to use tcgetattr() in oder to check
       ;; all performed settings. But I really dot't like to find back
       ;; that each zero ore one in coresponding field mead. So I prefer
-      ;; to process each option step by step and singnal a condition
+      ;; to process each option step by step and signal a condition
       ;; when there will be a difference:
-      (dolist (option options)
-	(process-option option set)
-        (%tcsetattr fd tcsanow set)
-        (%tcgetattr fd test)
-        (or (compare-termios set test)
-            (if (or (member option *baud-rates*) (integerp option))
-                (error 'termios-speed-failled
-                       :request (if (integerp option)
-                                    option
-                                    (parse-integer (symbol-name option)
-                                                   :start 1)))
+      ((%set-test-termios (fd set test)
+         (%tcsetattr fd :tcsanow set)
+         (%tcgetattr fd test)
+         (and
+          (every #'(lambda (flag)
+                     (=  (foreign-slot-value set  'termios flag)
+                         (foreign-slot-value test 'termios flag)))
+                 '(iflag oflag cflag lflag))
+          (dotimes (i nccs t)
+            (when
+                (/= (mem-aref (foreign-slot-pointer set
+                                                    'termios
+                                                    'control-chars)
+                              'cc
+                              i)
+                    (mem-aref (foreign-slot-pointer test
+                                                    'termios
+                                                    'control-chars)
+                              'cc
+                              i))
+              (return nil)))))
+       (%stty (set test fd options)
+         (let ((opt  (car options))
+               (setp (cadr options))
+               (rst  (cddr options)))
+           (cond
+             ((termios-flag-p opt)
+              (setup-termios-flag set opt setp)
+              (unless (%set-test-termios fd set test)
+                (error 'termios-set-flag-failled :request opt)))
+             ((termios-control-character-p opt)
+              (setup-termios-control-character set opt setp)
+              (unless (%set-test-termios fd set test)
+                (error 'termios-set-control-character-failled :request opt)))
+             ((eql opt :raw)
+              (if setp (make-raw-termios set) (make-cooked-termios set))
+              (unless (%set-test-termios fd set test)
                 (error 'termios-set-failled
-                       :request option))))))))
+                        :request (if setp :raw :cooked))))
+             ((eql opt :cooked)
+              (if setp (make-cooked-termios set) (make-raw-termios set))
+              (unless (%set-test-termios fd set test)
+                (error 'termios-set-failled
+                        :request (if setp :cooked :raw))))
+             ((eql opt :evenp)
+              (if setp (make-evenp-termios set) (make-oddp-termios set))
+              (unless (%set-test-termios fd set test)
+                (error 'termios-set-failled
+                        :request (if setp :evenp :oddp))))
+             ((eql opt :oddp)
+              (if setp (make-oddp-termios set) (make-evenp-termios set))
+              (unless (%set-test-termios fd set test)
+                (error 'termios-set-failled
+                        :request (if setp :oddp :evenp)))))
+           (if rst
+               (%stty set test fd rst)
+               set))))
+    (let ((fd (typecase serial
+                (integer serial)
+                (stream (fd-of serial))
+                (t (error "You should specify stream or fd"))))
+          (opts-w/o-baud (remove-if #'termios-baud-rate-p options))
+          (baud  (find-if #'termios-baud-rate-p options)))
+      (when (and options (oddp (length opts-w/o-baud)))
+        (error "Mailformed stty options list"))
+      (with-foreign-objects ((set  'termios)
+                             (test 'termios))
+        (%tcgetattr fd set)
+        (when baud
+          (%cfsetispeed set baud)
+          (%cfsetospeed set baud)
+          (%tcsetattr fd :tcsanow set)
+          (%tcgetattr fd test)
+          (let ((ispeed (%cfgetispeed test))
+                (ospeed (%cfgetospeed test)))
+            (unless (and (eql baud ispeed) (eql baud ospeed))
+              (error 'termios-set-baud-rate-failled :request baud))))
+        (%stty set test fd opts-w/o-baud)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
