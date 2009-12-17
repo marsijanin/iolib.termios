@@ -28,16 +28,16 @@ values before reading/writing.
 
 Usage of `with-serial-stream' macro is recommended. Syntax is like 
 `with-open-file':
- (with-raw-serial (stream path &key
- 		   (speed :b115200)
-		   (parity n)
-		   (byte-size 8)
-		   hardware-flow-control
-		   software-flow-control
-		   (flag (logior o-rdwr o-nonblock o-noctty))
-                   (mode *default-open-mode*)
-                   (external-format :default)
-		   timeout read-timeout write-timeout)
+ (with-serial-stream (stream path &key
+ 	               (speed :b115200)
+		       (parity :n)
+		       (byte-size 8)
+		       hardware-flow-control
+		       software-flow-control
+		       (flag (logior o-rdwr o-nonblock o-noctty))
+                       (mode *default-open-mode*)
+                       (external-format :default)
+		       timeout read-timeout write-timeout)
     &body body)
 
 I.e. only serial device pathname is necessary parameter.  You can
@@ -46,7 +46,8 @@ byte/character size and parity checking mode. Also you can turn on
 hardware/software flow control and specify additional stream
 parameters. Note, that this macro will allways set `raw` mode, so if
 you prefer `canonical` mode you should use `with-open-stream` and
-`stty` (see below) instead.
+`stty` (see below) instead. There is variant for multiple strams:
+`with-serial-streams`.
 
 `stty` function is like `stty' shell utility:
   (stty fd :b115200 :raw t :hupcl nil)

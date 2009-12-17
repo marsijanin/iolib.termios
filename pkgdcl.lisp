@@ -44,6 +44,7 @@
    ;; serila stream manipulation
    #:open-serial-stream
    #:with-serial-stream
+   #:with-serial-streams
    ;; List of all open serial streams. Can be used in signal handlers.
    #:*open-serial-streams*))            ;</ defpackage>
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

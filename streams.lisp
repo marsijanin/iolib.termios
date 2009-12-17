@@ -151,3 +151,11 @@
             `(setf (write-timeout ,stream) ,write-timeout))
      ,@body))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defmacro with-serial-streams (binds &body body)
+  "Multiple `with-serial-streams` variant"
+  (if binds
+      `(with-serial-stream ,(car binds)
+         (with-serial-streams ,(cdr binds)
+           ,@body))
+      `(progn ,@body)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
