@@ -35,10 +35,12 @@
                             :external-format external-format
                             :original-settings termios)))
       (push s *open-serial-streams*)
+      (trivial-garbage:finalize s (lambda () (foreign-free termios)))
       s)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Close method for dual-channel-single-fd-gray-stream in iolib.streams,
-;; (which call %sys-close) is :around too. 
+;; (which call %sys-close) is :around too.
+;; No need to call cancel-finalization case another close method will do it.
 (defmethod close :around ((stream dual-channel-tty-gray-stream) &key abort)
   (declare (ignorable abort))
   (when (fd-of stream)
