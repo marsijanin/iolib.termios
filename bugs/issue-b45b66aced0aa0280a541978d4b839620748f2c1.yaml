@@ -5,8 +5,8 @@ type: :feature
 component: iolib.termios
 release: v0.1
 reporter: Nikolay V. Razbegaev <marsijanin@gmail.com>
-status: :unstarted
-disposition: 
+status: :closed
+disposition: :fixed
 creation_time: 2010-02-13 09:51:37.458083 Z
 references: []
 
@@ -15,4 +15,8 @@ log_events:
 - - 2010-02-13 09:51:38.664700 Z
   - Nikolay V. Razbegaev <marsijanin@gmail.com>
   - created
+  - ""
+- - 2010-02-13 10:03:19.261235 Z
+  - Nikolay V. Razbegaev <marsijanin@gmail.com>
+  - closed with disposition fixed
   - ""

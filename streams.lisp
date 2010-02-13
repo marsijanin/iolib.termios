@@ -25,6 +25,10 @@
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
    with serial device and push in into the `*open-serial-streams*' list"
+  (when (find-if #'(lambda (x)
+                     (string= (tty-path x) path))
+                 *open-serial-streams*)
+    (error "Serial device ~A already opened!" path))
   (let ((fd (%sys-open path flag mode))
         (termios (foreign-alloc 'termios)))
     (%tcgetattr fd termios)
