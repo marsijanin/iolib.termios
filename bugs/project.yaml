@@ -1,0 +1,16 @@
+--- !ditz.rubyforge.org,2008-03-06/project 
+name: iolib.termios
+version: "0.5"
+components: 
+- !ditz.rubyforge.org,2008-03-06/component 
+  name: iolib.termios
+releases: 
+- !ditz.rubyforge.org,2008-03-06/release 
+  name: v0.1
+  status: :unreleased
+  release_time: 
+  log_events: 
+  - - 2010-02-13 09:38:25.214577 Z
+    - Nikolay V. Razbegaev <marsijanin@gmail.com>
+    - created
+    - ""

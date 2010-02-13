@@ -1,0 +1,18 @@
+--- !ditz.rubyforge.org,2008-03-06/issue 
+title: Checking is serial device already opened before opening it
+desc: ""
+type: :feature
+component: iolib.termios
+release: v0.1
+reporter: Nikolay V. Razbegaev <marsijanin@gmail.com>
+status: :unstarted
+disposition: 
+creation_time: 2010-02-13 09:51:37.458083 Z
+references: []
+
+id: b45b66aced0aa0280a541978d4b839620748f2c1
+log_events: 
+- - 2010-02-13 09:51:38.664700 Z
+  - Nikolay V. Razbegaev <marsijanin@gmail.com>
+  - created
+  - ""
