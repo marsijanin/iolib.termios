@@ -33,7 +33,7 @@
   (fd      :int)
   (termios :pointer)) 			; const struct termios *
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defsyscall (%tcgetsid "tcgetsid") pid-t
+(defsyscall (%tcgetsid "tcgetsid") isys:pid-t
   (fd :int))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defsyscall (%tcsendbreak "tcsendbreak") (:int :restart t :handle fd)

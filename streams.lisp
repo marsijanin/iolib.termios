@@ -20,8 +20,8 @@
   "List of all open serial streams for restoring original serial devices
    settings via signal handlers.")
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun open-serial-stream (path &key (flag (logior o-rdwr o-nonblock o-noctty))
-                        (mode *default-open-mode*)
+(defun open-serial-stream (path &key (flag (logior isys:o-rdwr isys:o-nonblock isys:o-noctty))
+                        (mode isys:*default-open-mode*)
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
    with serial device and push in into the `*open-serial-streams*' list"
@@ -29,7 +29,7 @@
                      (string= (tty-path x) path))
                  *open-serial-streams*)
     (error "Serial device ~A already opened!" path))
-  (let ((fd (%sys-open path flag mode))
+  (let ((fd (isys:open path flag mode))
         (termios (foreign-alloc 'termios)))
     (%tcgetattr fd termios)
     (let ((s (make-instance 'dual-channel-tty-gray-stream
@@ -78,8 +78,10 @@
                                       ;; not an posix option
                                       #+(or bsd linux)hardware-flow-control
                                       software-flow-control
-                                      (flag (logior o-rdwr o-nonblock o-noctty))
-                                      (mode *default-open-mode*)
+                                      (flag (logior isys:o-rdwr
+                                                    isys:o-nonblock
+                                                    isys:o-noctty))
+                                      (mode isys:*default-open-mode*)
                                       (external-format :default)
                                       timeout read-timeout write-timeout)
                               &body body)
@@ -100,8 +102,9 @@
      and 300-5e1 `:speed :b300 :parity :e :byte-size 5`. 115200-8n1 is default.
 
    Other &key parameters is:
-   - flag & mode: passed to `isys:%sys-open',
-     (logior isys:o-rdwr isys:o-nonblock) & *default-open-mode* by default.
+   - flag & mode: passed to `isys:open',
+     (logior isys:o-rdwr isys:o-nonblock isys:o-noctty)
+     & isys:*default-open-mode* by default.
    - external-format: see babel manual.
    - stream read/write timeout values: no default values are specified.
 

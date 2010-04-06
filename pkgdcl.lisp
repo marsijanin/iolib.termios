@@ -5,7 +5,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (defpackage :iolib.termios
   (:nicknames #:itty)
-  (:use :iolib.base :iolib.syscalls :iolib.streams :cffi)
+  (:use :iolib.base :iolib.streams :cffi)
+  (:import-from :iolib.syscalls :defsyscall :defcfun*)
   (:export
    ;; Struct termios:
    #:termios
