@@ -3,7 +3,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (in-package :iolib.termios)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defclass dual-channel-tty-gray-stream (dual-channel-single-fd-gray-stream)
+(defclass dual-channel-tty-gray-stream (dual-channel-gray-stream)
   ((path :reader tty-path :initarg :path :type string)
    (read-timeout :accessor read-timeout :initarg :read-timeout)
    (write-timeout :accessor write-timeout :initarg :write-timeout)
@@ -33,8 +33,7 @@
         (termios (foreign-alloc 'termios)))
     (%tcgetattr fd termios)
     (let ((s (make-instance 'dual-channel-tty-gray-stream
-                            :input-fd fd
-                            :output-fd fd
+                            :fd fd
                             :path path
                             :external-format external-format
                             :original-settings termios)))
