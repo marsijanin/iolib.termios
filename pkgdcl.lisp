@@ -1,9 +1,9 @@
-;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
-;; termios (3p) api wrapers -  package definition.
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(in-package :common-lisp-user)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defpackage :iolib.termios
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
+;;;; Termios (3p) api wrappers for iolib - package definition.
+
+(in-package #:common-lisp-user)
+
+(defpackage #:iolib.serial
   (:nicknames #:itty)
   (:use :iolib.base :iolib.streams :cffi)
   (:import-from :iolib.syscalls :defsyscall :defcfun*)
@@ -47,5 +47,7 @@
    #:with-serial-stream
    #:with-serial-streams
    ;; List of all open serial streams. Can be used in signal handlers.
-   #:*open-serial-streams*))            ;</ defpackage>
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+   #:*open-serial-streams*))
+;;;; EOF
+
+

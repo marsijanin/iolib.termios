@@ -1,9 +1,9 @@
-;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
-;; common lisp wrapers for termios (3) api
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(in-package :iolib.termios)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; <Termios options manipulation routines>
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
+;;;; Termios (3p) api wrappers for iolib
+
+(in-package #:iolib.serial)
+
+;;; Termios options manipulation routines
 (defmacro membercase (form &rest clauses)
   "(membercase 'a 
 	    ('(b c e) 1)
@@ -16,7 +16,7 @@
                              (body (rest x)))
                          `((member ,form ,lst) ,@body)))
                    clauses)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmacro enumcase (form &rest clauses)
   "(enumcase :b115200
 		   (baud-rates 1)
@@ -30,7 +30,7 @@
                                      `((foreign-enum-keyword-list ',enum)
                                        ,@body)))
                                clauses)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun which-termios-keyword (keyword)
   (enumcase keyword
    (iflag 'iflag)
@@ -39,16 +39,16 @@
    (cflag 'cflag)
    (control-character 'control-character)
    (baud-rate 'baud-rate)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun termios-flag-p (keyword)
   (member (which-termios-keyword keyword) '(iflag oflag cflag lflag)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun termios-control-character-p (keyword)
   (eql 'control-character (which-termios-keyword keyword)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun termios-baud-rate-p (keyword)
   (eql 'baud-rate (which-termios-keyword keyword)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun setup-termios-flag (termios flag &optional setp)
   "Reset `flag' in corresponding `termios' field, or set in, if `setp' is true."
   (let ((type (which-termios-keyword flag)))
@@ -59,7 +59,7 @@
             (funcall (if setp #'logior #'logandc2)
                      (foreign-slot-value termios 'termios type)
                      (foreign-enum-value type flag)))))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun setup-termios-control-character (termios cc value)
   "Setup corresponding control character value.
    Value can be `control-character' keyword or integer."
@@ -72,7 +72,7 @@
         (if (integerp value)
             value
             (foreign-enum-value 'control-character value))))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun make-raw-termios (termios)
   "Same effect as cfmakeraw()"
   (dolist (flag
@@ -82,7 +82,7 @@
               :csize :parenb))				                 ;cflag
     (setup-termios-flag termios flag))
   (setup-termios-flag termios :cs8 t))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun make-cooked-termios (termios)
   "Effect is opposite to `make-raw-termios'"
   (dolist (flag
@@ -92,7 +92,7 @@
               :csize :parenb))				                 ;cflag
     (setup-termios-flag termios flag t))
   #|(set-termios-option termios 'cs8 t)|#)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun make-evenp-termios (termios)
   "Enable parenb and cs7; disable parodd"
   (setup-termios-flag termios :parenb t)
@@ -100,7 +100,7 @@
   (setup-termios-flag termios :cstopb)
   (setup-termios-flag termios :csize)
   (setup-termios-flag termios :cs7 t))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun make-oddp-termios (termios)
   "Enable parenb, cs7, and parodd"
   (setup-termios-flag termios :parenb t)
@@ -108,18 +108,16 @@
   (setup-termios-flag termios :cstopb)
   (setup-termios-flag termios :csize)
   (setup-termios-flag termios :cs7 t))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun make-8n1-termios (termios)
   "Disable parenb, and set cs8."
   (setup-termios-flag termios :parenb)
   (setup-termios-flag termios :cstopb)
   (setup-termios-flag termios :csize)
   (setup-termios-flag termios :cs8 t))
-;; </ Termios options manipulation routines >
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; I guess that bits manipulation stuff is not a lisp way,
-;; and using a kind of `stty (1p)' will be more lisp kind
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; I guess that bits manipulation stuff is not a lisp way,
+;;; and using a kind of `stty (1p)' will be more lisp kind
 (defun stty (serial &rest options)
   "Impliment stty (1) in lisp way.
    `serial` can be stream or fd.
@@ -224,4 +222,5 @@
             (unless (and (eql baud ispeed) (eql baud ospeed))
               (error 'termios-set-baud-rate-failled :request baud))))
         (%stty set test fd opts-w/o-baud)))))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; EOF
+

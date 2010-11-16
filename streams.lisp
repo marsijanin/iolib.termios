@@ -1,34 +1,18 @@
-;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
-;; streams for devices supported termios (3p) api
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(in-package :iolib.termios)
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; indent-tabs-mode: nil -*-
+;;;; Termios (3p) api wrappers for iolib - streams abstraction
+
+(in-package #:iolib.serial)
+
 (defclass dual-channel-tty-gray-stream (dual-channel-gray-stream)
   ((path :reader tty-path :initarg :path :type string)
-   (read-timeout :accessor read-timeout :initarg :read-timeout)
-   (write-timeout :accessor write-timeout :initarg :write-timeout)
    (original-settings :reader original-settings :initarg :original-settings))
   (:documentation "Gray stream class for serial devices"))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Unix signals such SIGTERM etc. are not usual conditions so with-open-stream
-;; macro can't call close in order to restore original settings.
-;; On the other hand installing signal handler is not a part
-;; of the common-lip standard and not a purpose of this library.
-;; So i guess that provide a list of open serial devices streams
-;; for library users will be better solution.
-(defparameter *open-serial-streams* nil
-  "List of all open serial streams for restoring original serial devices
-   settings via signal handlers.")
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun open-serial-stream (path &key (flag (logior isys:o-rdwr isys:o-nonblock isys:o-noctty))
                         (mode isys:*default-open-mode*)
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
-   with serial device and push in into the `*open-serial-streams*' list"
-  (when (find-if #'(lambda (x)
-                     (string= (tty-path x) path))
-                 *open-serial-streams*)
-    (error "Serial device ~A already opened!" path))
+   with serial device"
   (let ((fd (isys:open path flag mode))
         (termios (foreign-alloc 'termios)))
     (%tcgetattr fd termios)
@@ -37,10 +21,9 @@
                             :path path
                             :external-format external-format
                             :original-settings termios)))
-      (push s *open-serial-streams*)
       (trivial-garbage:finalize s (lambda () (foreign-free termios)))
       s)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; Close method for dual-channel-single-fd-gray-stream in iolib.streams,
 ;; (which call %sys-close) is :around too.
 ;; No need to call cancel-finalization case another close method will do it.
@@ -49,27 +32,9 @@
   (when (fd-of stream)
     (%tcsetattr (fd-of stream) :tcsanow (original-settings stream))
     (foreign-free (original-settings stream))
-    (setf (slot-value stream 'original-settings) nil)
-    (removef *open-serial-streams* stream))
+    (setf (slot-value stream 'original-settings) nil))
   (call-next-method))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmethod stream-read-sequence :before ((stream dual-channel-tty-gray-stream)
-                                         sequence start end &key)
-  (when (slot-boundp stream 'read-timeout)
-    (iomux:wait-until-fd-ready (fd-of stream) :input (read-timeout stream) t)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmethod stream-write-sequence :before ((stream dual-channel-tty-gray-stream)
-                                         sequence start end &key)
-  (when (slot-boundp stream 'write-timeout)
-    (iomux:wait-until-fd-ready (fd-of stream) :output
-                               (write-timeout stream) t)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defmethod stream-write-sequence :after ((stream dual-channel-tty-gray-stream)
-                                         sequence start end
-                                         &key (finish-output t))
-  (when finish-output
-    (stream-finish-output stream)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmacro with-serial-stream ((stream path
                                       &key (speed :b115200)
                                       (parity :n)
@@ -81,8 +46,7 @@
                                                     isys:o-nonblock
                                                     isys:o-noctty))
                                       (mode isys:*default-open-mode*)
-                                      (external-format :default)
-                                      timeout read-timeout write-timeout)
+                                      (external-format :default))
                               &body body)
   "Wrapper around `with-open-stream' with a few settings for serial device:
    - speed: baud rate. An integer (stty will look for a corresponding
@@ -109,16 +73,13 @@
 
 
    Example (if rx of /dev/ttyUSB0 connected with rx should return T):
-   (with-serial-stream (tty \"/dev/ttyUSB0\"   
-                            :speed :b57600     
-                            :parity :n)      
-     (let* ((out \"hello\")                    
-            (ln (length out))                
-            (in (make-string ln)))           
-       (setf (itty:read-timeout tty) .1)     
-       (stream-write-sequence tty out 0 ln)  
-       (stream-read-sequence tty in 0 ln)    
-       (string= in out)))                    
+   (itty:with-serial-stream (tty \"/dev/ttyUSB0\"
+                                 :speed :b38400)
+	   (let ((str \"test\"))
+	     (write-line str tty)
+	     (finish-output tty)
+	     (sleep .1)
+	     (string= (read-line tty) str)))
   "
   `(with-open-stream
        (,stream (open-serial-stream ,path
@@ -150,15 +111,8 @@
            ;; hardware flow control
            #+(or bsd linux),@(when hardware-flow-control '(:crtscts t))
            ,@(when software-flow-control '(:ixon t :ixoff t)))
-     ,(when timeout
-            `(setf (read-timeout ,stream) ,timeout)
-            `(setf (read-timeout ,stream) ,timeout))
-     ,(when read-timeout
-            `(setf (read-timeout ,stream) ,read-timeout))
-     ,(when write-timeout
-            `(setf (write-timeout ,stream) ,write-timeout))
      ,@body))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmacro with-serial-streams (binds &body body)
   "Multiple `with-serial-streams` variant"
   (if binds
@@ -166,4 +120,5 @@
          (with-serial-streams ,(cdr binds)
            ,@body))
       `(progn ,@body)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;; EOF
+
