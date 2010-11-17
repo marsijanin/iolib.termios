@@ -1,66 +1,20 @@
 iolib.termios - an iolib (http://common-lisp.net/project/iolib)
 extension for RS-422/485/232 (aka serial) interfaces - i.e. termios (3)
-api common lisp wrappers.  It is still proof of concept now, and
-there is no documentation either, except for docstrings and this readme.
-
-I started writing this stuff in order to make my code for communication
-with some embedded devices with via RS-422/485 interface not depended
-on implementation (I used some sbcl wrappers from sb-posix:
-http://paste.lisp.org/display/87952).  In other words the main purpose of
-the iolib.termios is more likely to provide a portable way to talk with
-modem from lisp, than to cover all termios features.
+api common lisp wrappers with some stream abstraction.
 
 API:
 
-Each instance of the `dual-channel-tty-gray-stream' stores original
-termios settings (baud rates, control characters values etc.) and
-the call of `close' on such stream will restore this settings. 
-`*open-serial-streams*' variable give you access to the list of all open
-instances of the `dual-channel-tty-gray-stream', so you can call
-(map 'nil #'close *open-serial-streams*) or something like that
-in signal handler.
+(documentation 'itty:with-serial-stream 'function)
 
-If you specify `read-timeout' & `write-timeout' options of the
-`dual-channel-tty-gray-stream' (via `setf'), then
-`stream-read/write-sequence' methods (from iolib.base package) will
-poll stream `fd' for corresponding i/o operation with specified timeout
-values before reading/writing.
-
-Usage of `with-serial-stream' macro is recommended. Syntax is like 
-`with-open-file':
- (with-serial-stream (stream path &key
- 	               (speed :b115200)
-		       (parity :n)
-		       (byte-size 8)
-		       hardware-flow-control
-		       software-flow-control
-		       (flag (logior o-rdwr o-nonblock o-noctty))
-                       (mode *default-open-mode*)
-                       (external-format :default)
-		       timeout read-timeout write-timeout)
-    &body body)
-
-I.e. only serial device pathname is necessary parameter.  You can
-specify require baud rate (in keyword form: `:b9600` and so),
-byte/character size and parity checking mode. Also you can turn on
-hardware/software flow control and specify additional stream
-parameters. Note, that this macro will allways set `raw` mode, so if
-you prefer `canonical` mode you should use `with-open-stream` and
-`stty` (see below) instead. There is variant for multiple strams:
-`with-serial-streams`.
-
-`stty` function is like `stty' shell utility:
-  (stty fd :b115200 :raw t :hupcl nil)
-
-
+(documentation 'itty:stty 'function)
 
 SUPPORTED PLATFORMS:
 
 In theory it should work on all posix platforms supported by iolib. 
 
-I run it under sbcl 1.0.31 & 1.0.32 under archlinux and debian lenny,
-clisp 2.47 under archlinux and debian lenny, ccl 1.3 and 1.4 under archlinux.
-(all 32 bit).
+Tested (rx<->tx connected echo) on sbcl 1.0.44, ccl 1.5, ecl 10.7.1,
+cmucl 20b and clisp 2.49 on linux x86 (32 bit) host with recent
+quicklisp distribution.
 
 TODO:
 
