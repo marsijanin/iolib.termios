@@ -54,17 +54,17 @@
   (let ((type (which-termios-keyword flag)))
     (unless type
       (error "Unknown termios option ~a" flag))
-    (setf (foreign-slot-value termios 'termios type)
+    (setf (foreign-slot-value termios '(:struct termios) type)
             ;; value specified => set (logior), reset over otherwise
             (funcall (if setp #'logior #'logandc2)
-                     (foreign-slot-value termios 'termios type)
+                     (foreign-slot-value termios '(:struct termios) type)
                      (foreign-enum-value type flag)))))
 
 (defun setup-termios-control-character (termios cc value)
   "Setup corresponding control character value.
    Value can be `control-character' keyword or integer."
   (setf (mem-aref (foreign-slot-pointer termios
-                                        'termios
+                                        '(:struct termios)
                                         'control-chars)
                        'cc
                        ;; constant name is offset
@@ -149,18 +149,18 @@
          (%tcgetattr fd test)
          (and
           (every #'(lambda (flag)
-                     (=  (foreign-slot-value set  'termios flag)
-                         (foreign-slot-value test 'termios flag)))
+                     (=  (foreign-slot-value set  '(:struct termios) flag)
+                         (foreign-slot-value test '(:struct termios) flag)))
                  '(iflag oflag cflag lflag))
           (dotimes (i nccs t)
             (when
                 (/= (mem-aref (foreign-slot-pointer set
-                                                    'termios
+                                                    '(:struct termios)
                                                     'control-chars)
                               'cc
                               i)
                     (mem-aref (foreign-slot-pointer test
-                                                    'termios
+                                                    '(:struct termios)
                                                     'control-chars)
                               'cc
                               i))
@@ -209,8 +209,8 @@
           (baud  (find-if #'termios-baud-rate-p options)))
       (when (and options (oddp (length opts-w/o-baud)))
         (error "Mailformed stty options list"))
-      (with-foreign-objects ((set  'termios)
-                             (test 'termios))
+      (with-foreign-objects ((set  '(:struct termios))
+                             (test '(:struct termios)))
         (%tcgetattr fd set)
         (when baud
           (%cfsetispeed set baud)

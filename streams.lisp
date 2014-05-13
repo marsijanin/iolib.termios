@@ -3,18 +3,22 @@
 
 (in-package #:iolib.serial)
 
+
+(defvar *default-open-mode #o666)
+
+
 (defclass dual-channel-tty-gray-stream (dual-channel-gray-stream)
   ((path :reader tty-path :initarg :path :type string)
    (original-settings :reader original-settings :initarg :original-settings))
   (:documentation "Gray stream class for serial devices"))
 
 (defun open-serial-stream (path &key (flag (logior isys:o-rdwr isys:o-nonblock isys:o-noctty))
-                        (mode isys:*default-open-mode*)
+                        (mode *default-open-mode*)
 			(external-format :default))
   "Return `dual-channel-tty-gray-stream' instances associated
    with serial device"
   (let ((fd (isys:open path flag mode))
-        (termios (foreign-alloc 'termios)))
+        (termios (foreign-alloc '(:struct termios))))
     (%tcgetattr fd termios)
     (let ((s (make-instance 'dual-channel-tty-gray-stream
                             :fd fd
@@ -45,7 +49,7 @@
                                       (flag (logior isys:o-rdwr
                                                     isys:o-nonblock
                                                     isys:o-noctty))
-                                      (mode isys:*default-open-mode*)
+                                      (mode *default-open-mode*)
                                       (external-format :default))
                               &body body)
   "Wrapper around `with-open-stream' with a few settings for serial device:
@@ -67,7 +71,7 @@
    Other &key parameters is:
    - flag & mode: passed to `isys:open',
      (logior isys:o-rdwr isys:o-nonblock isys:o-noctty)
-     & isys:*default-open-mode* by default.
+     & *default-open-mode* by default.
    - external-format: see babel manual.
    - stream read/write timeout values: no default values are specified.
 
