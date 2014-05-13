@@ -14,7 +14,7 @@
   :description "Termios (3p) api wrappers"
   :maintainer "Razbegaev N.V. <marsijanin@gmail.com>"
   :licence "MIT"
-  :depends-on (:iolib.base :iolib.syscalls :iolib.streams :cffi :cffi-grovel)
+  :depends-on (:iolib.base :iolib.syscalls :iolib.streams :cffi :cffi-grovel :trivial-garbage)
   :components
   #+unix
   (#+ecl
